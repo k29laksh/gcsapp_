@@ -1,4 +1,3 @@
-import type { NextConfig } from "next";
 
 // Remove the type annotation to allow custom properties like 'eslint'
 const nextConfig = {
