@@ -1,9 +1,8 @@
-/** @type {import('next').NextConfig} */
+import type { NextConfig } from "next";
+
+// Remove the type annotation to allow custom properties like 'eslint'
 const nextConfig = {
-  images: {
-    domains: ["images.unsplash.com", "res.cloudinary.com"],
-  },
-   typescript: {
+ typescript: {
     // ✅ Allow production builds to succeed even if there are TS errors
     ignoreBuildErrors: true,
   },
@@ -11,6 +10,6 @@ const nextConfig = {
     // ✅ Allow production builds to succeed even if there are ESLint errors
     ignoreDuringBuilds: true,
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

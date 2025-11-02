@@ -24,12 +24,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
           <ReduxProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          
             <ClientLayout>
             {children}
             </ClientLayout>
             <Toaster />
-          </ThemeProvider>
           </ReduxProvider>
       </body>
     </html>

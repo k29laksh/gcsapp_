@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const requirementsApi = createApi({
   reducerPath: 'Requirements',
   baseQuery: fetchBaseQuery({ 
-    baseUrl:  `${process.env.BACKEND_URL}/requirements`,
+    baseUrl:  `${process.env.NEXT_PUBLIC_BACKEND_URL}/requirements`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

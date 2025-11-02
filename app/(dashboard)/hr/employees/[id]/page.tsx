@@ -31,7 +31,7 @@ export default function EmployeePage({ params }: EmployeePageProps) {
       }
 
       try {
-        const response = await fetch(`http://127.0.0.1:8000/employee/${params.id}/`, {
+        const response = await fetch(` ${process.env.NEXT_PUBLIC_BACKEND_URL}/${params.id}/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -5,7 +5,7 @@ const InvoiceViewer = ({ invoiceId, token }) => {
   const [viewLoading, setViewLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [pdfSrc, setPdfSrc] = useState(null); // store PDF URL for inline view
-  const pdfUrl = `${process.env.BACKEND_URL}/invoices/${invoiceId}/generate-pdf/`;
+  const pdfUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/invoices/${invoiceId}/generate-pdf/`;
 
   // 🔹 Inline view (within same page)
   const viewInvoice = async () => {

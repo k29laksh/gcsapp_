@@ -27,7 +27,7 @@ interface UpdateUserData {
 
 export const authApi = createApi({
   reducerPath: 'User',
-  baseQuery: fetchBaseQuery({ baseUrl: `${process.env.BACKEND_URL}` }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}` }),
 
   tagTypes: ['User'], 
 

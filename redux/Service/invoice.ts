@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const invoiceApi = createApi({
   reducerPath: 'invoiceApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://127.0.0.1:8000/invoices',
+    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/invoices`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

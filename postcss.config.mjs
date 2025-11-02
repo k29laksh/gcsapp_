@@ -1,7 +1,7 @@
-// ESM Syntax (The correct fix for a .mjs file)
-export default {
+const config = {
   plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
+    "@tailwindcss/postcss": {},
   },
-}
+};
+
+export default config;

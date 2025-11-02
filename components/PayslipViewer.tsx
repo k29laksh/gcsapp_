@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 const PayslipViewer = ({ payrollId, token }) => {
   const [loading, setLoading] = useState(false);
   const [pdfSrc, setPdfSrc] = useState(null);
-  const pdfUrl = `${process.env.BACKEND_URL}/payroll/${payrollId}/generate-pdf/`;
+  const pdfUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/payroll/${payrollId}/generate-pdf/`;
 
   // Automatically fetch the PDF when component mounts
   useEffect(() => {
