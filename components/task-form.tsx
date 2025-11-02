@@ -219,7 +219,7 @@ export function TaskForm({ task, isEditing = false, projectId }: TaskFormProps) 
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Basic Information</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {!projectId && (
                 <div>
                   <Label htmlFor="project">Project *</Label>
@@ -297,7 +297,7 @@ export function TaskForm({ task, isEditing = false, projectId }: TaskFormProps) 
               <FileText className="h-4 w-4" />
               Task Type & Plan Details
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="type">Task Type</Label>
                 <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
@@ -331,7 +331,7 @@ export function TaskForm({ task, isEditing = false, projectId }: TaskFormProps) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="plan_number">Plan Number</Label>
                 <Input
@@ -358,7 +358,7 @@ export function TaskForm({ task, isEditing = false, projectId }: TaskFormProps) 
           {/* Assignment and Timeline */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Assignment & Timeline</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="assigned_to">Assigned To</Label>
                 <Select
@@ -406,7 +406,7 @@ export function TaskForm({ task, isEditing = false, projectId }: TaskFormProps) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value)}>

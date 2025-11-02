@@ -298,7 +298,7 @@ export function InvoiceForm({ initialData, isEditing = false, invoiceId, onSucce
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Customer, Project, Vessel, Status fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="customer"
@@ -424,7 +424,7 @@ export function InvoiceForm({ initialData, isEditing = false, invoiceId, onSucce
         </div>
 
         {/* Date fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="invoice_date"
@@ -487,7 +487,7 @@ export function InvoiceForm({ initialData, isEditing = false, invoiceId, onSucce
         />
 
         {/* GST fields (now as absolute amounts) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="sgst"
@@ -553,7 +553,7 @@ export function InvoiceForm({ initialData, isEditing = false, invoiceId, onSucce
         </div>
 
         {/* Optional fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="po_no"

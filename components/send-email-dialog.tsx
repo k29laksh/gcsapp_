@@ -91,7 +91,7 @@ export function SendEmailDialog({ quotationId, customerEmail, quotationNumber }:
           <DialogDescription>Send quotation {quotationNumber} to the customer via email.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
             <Label htmlFor="email" className="text-right">
               Email
             </Label>
@@ -104,7 +104,7 @@ export function SendEmailDialog({ quotationId, customerEmail, quotationNumber }:
               placeholder="customer@example.com"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
             <Label htmlFor="message" className="text-right">
               Message
             </Label>

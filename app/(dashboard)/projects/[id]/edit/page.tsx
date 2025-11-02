@@ -81,11 +81,7 @@ export default function EditProjectPage() {
           </AlertDescription>
         </Alert>
         
-        <Button asChild>
-          <Link href="/projects">
-            Back to Projects
-          </Link>
-        </Button>
+        
       </div>
     )
   }
@@ -120,14 +116,7 @@ export default function EditProjectPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/projects">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <h2 className="text-2xl font-bold">Edit Project</h2>
-      </div>
+      
       
       {transformedProject && (
         <ProjectForm project={transformedProject} isEditing />

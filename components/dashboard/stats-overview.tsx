@@ -232,11 +232,11 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="sales">Sales</TabsTrigger>
-        <TabsTrigger value="purchases">Purchases</TabsTrigger>
-        <TabsTrigger value="projects">Projects</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
+        <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">Overview</TabsTrigger>
+        <TabsTrigger value="sales" className="text-xs sm:text-sm py-2">Sales</TabsTrigger>
+        <TabsTrigger value="purchases" className="text-xs sm:text-sm py-2">Purchases</TabsTrigger>
+        <TabsTrigger value="projects" className="text-xs sm:text-sm py-2">Projects</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
@@ -310,14 +310,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Monthly Revenue Trend</CardTitle>
-              <CardDescription>Revenue over the last 6 months</CardDescription>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="lg:col-span-4">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Monthly Revenue Trend</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Revenue over the last 6 months</CardDescription>
             </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
+            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 {salesData.length > 0 ? (
                   <LineChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -346,13 +346,13 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Project Status</CardTitle>
-              <CardDescription>Current status distribution</CardDescription>
+          <Card className="lg:col-span-3">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Project Status</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Current status distribution</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 {projectStatusData.length > 0 ? (
                   <PieChart>
                     <Pie
@@ -389,10 +389,10 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       </TabsContent>
 
       <TabsContent value="sales" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">Total Sales</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -441,14 +441,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Sales Overview</CardTitle>
-              <CardDescription>Monthly sales performance</CardDescription>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="lg:col-span-4">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Sales Overview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Monthly sales performance</CardDescription>
             </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
+            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 {salesData.length > 0 ? (
                   <BarChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -471,14 +471,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Top Customers</CardTitle>
-              <CardDescription>By revenue contribution</CardDescription>
+          <Card className="lg:col-span-3">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Top Customers</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">By revenue contribution</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-6">
               {topCustomers.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                   <PieChart>
                     <Pie
                       data={topCustomers}
@@ -519,10 +519,10 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       </TabsContent>
 
       <TabsContent value="purchases" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">
                 Total Purchases
               </CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -555,16 +555,16 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Purchase Overview</CardTitle>
-              <CardDescription>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="lg:col-span-4">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Purchase Overview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Monthly purchases for the current year
               </CardDescription>
             </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
+            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 {purchasesData.length > 0 ? (
                   <BarChart data={purchasesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -591,10 +591,10 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       </TabsContent>
 
       <TabsContent value="projects" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">
                 Active Projects
               </CardTitle>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -649,14 +649,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Project Status Distribution</CardTitle>
-              <CardDescription>Current status of all projects</CardDescription>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="lg:col-span-4">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Project Status Distribution</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Current status of all projects</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
+            <CardContent className="px-2 sm:px-6">
+              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
                 {projectStatusData.length > 0 ? (
                   <PieChart>
                     <Pie
@@ -690,32 +690,32 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Project Metrics</CardTitle>
-              <CardDescription>Key performance indicators</CardDescription>
+          <Card className="lg:col-span-3">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="text-base sm:text-lg">Project Metrics</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Key performance indicators</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="px-4 sm:px-6">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">On Time Delivery</span>
-                  <span className="text-sm font-bold">85%</span>
+                  <span className="text-xs sm:text-sm font-medium">On Time Delivery</span>
+                  <span className="text-sm sm:text-base font-bold">85%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Budget Adherence</span>
-                  <span className="text-sm font-bold">92%</span>
+                  <span className="text-xs sm:text-sm font-medium">Budget Adherence</span>
+                  <span className="text-sm sm:text-base font-bold">92%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
+                  <span className="text-xs sm:text-sm font-medium">
                     Client Satisfaction
                   </span>
-                  <span className="text-sm font-bold">4.8/5</span>
+                  <span className="text-sm sm:text-base font-bold">4.8/5</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
+                  <span className="text-xs sm:text-sm font-medium">
                     Resource Utilization
                   </span>
-                  <span className="text-sm font-bold">78%</span>
+                  <span className="text-sm sm:text-base font-bold">78%</span>
                 </div>
               </div>
             </CardContent>

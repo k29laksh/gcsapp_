@@ -328,7 +328,7 @@ useEffect(() => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Quotation Details */}
               <FormField
                 control={form.control}
@@ -494,7 +494,7 @@ useEffect(() => {
             </div>
 
             {/* Marine Specific Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="design_scope"
@@ -671,7 +671,7 @@ useEffect(() => {
             </div>
 
             {/* Totals */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Subtotal</h4>
                 <p className="text-2xl font-bold">{formatCurrency(subtotal)}</p>
@@ -687,7 +687,7 @@ useEffect(() => {
             </div>
 
             {/* Notes and Terms & Conditions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="notes"

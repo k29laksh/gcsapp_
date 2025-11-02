@@ -378,7 +378,7 @@ export function ContactComponent({ customerId, contacts }: ContactComponentProps
 
             {currentContact && (
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="title">Title</Label>
                     <Select
@@ -440,7 +440,7 @@ export function ContactComponent({ customerId, contacts }: ContactComponentProps
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="phone">Phone</Label>
                     <Input

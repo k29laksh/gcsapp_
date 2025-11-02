@@ -279,7 +279,7 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Project Name *</Label>
                     <Input
@@ -325,7 +325,7 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="status">Project Status</Label>
                     <Select
@@ -461,7 +461,7 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="regulatory_body">Regulatory Body</Label>
                     <Select
@@ -508,7 +508,7 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
               </TabsContent>
 
               <TabsContent value="timeline" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Project Start Date</Label>
                     <DatePicker
@@ -598,7 +598,7 @@ export function ProjectForm({ project, isEditing = false }: ProjectFormProps) {
               </TabsContent>
 
               <TabsContent value="commercial" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="budget">Project Budget (₹)</Label>
                     <Input

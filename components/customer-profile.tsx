@@ -150,7 +150,7 @@ export function ProfileComponent({ customerId, customerData }: ProfileComponentP
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="gst_number">GST Number</Label>
                   <Input
@@ -173,7 +173,7 @@ export function ProfileComponent({ customerId, customerData }: ProfileComponentP
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="gst_state">GST State</Label>
                   <Select
@@ -210,7 +210,7 @@ export function ProfileComponent({ customerId, customerData }: ProfileComponentP
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="credit_terms_days">Credit Terms (Days)</Label>
               <Input

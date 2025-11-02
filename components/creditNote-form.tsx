@@ -208,7 +208,7 @@ export function CreditNoteForm({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Credit Note Number */}
               <div className="space-y-2">
                 <Label htmlFor="note_number">Credit Note Number *</Label>

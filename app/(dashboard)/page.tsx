@@ -102,11 +102,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Welcome back, User! Here's your business overview.
           </p>
         </div>
@@ -114,6 +114,7 @@ export default function DashboardPage() {
           onClick={handleRefresh}
           variant="outline"
           disabled={isLoading}
+          className="w-full sm:w-auto"
         >
           <RefreshCw
             className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -124,11 +125,11 @@ export default function DashboardPage() {
 
       <StatsOverview stats={stats} />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Recent Activities</CardTitle>
+            <CardDescription className="text-sm">
               Latest system activities and updates
             </CardDescription>
           </CardHeader>
@@ -141,10 +142,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Upcoming Tasks</CardTitle>
-            <CardDescription>Tasks requiring your attention</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Upcoming Tasks</CardTitle>
+            <CardDescription className="text-sm">Tasks requiring your attention</CardDescription>
           </CardHeader>
           <CardContent>
             <UpcomingTasks 
@@ -155,28 +156,28 @@ export default function DashboardPage() {
       </div>
 
       {/* Data Lengths Debug Section - You can remove this in production */}
-      <Card className="mt-6">
+      <Card className="mt-4 sm:mt-6">
         <CardHeader>
-          <CardTitle>Data Overview</CardTitle>
-          <CardDescription>Current data counts from RTK Query</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Data Overview</CardTitle>
+          <CardDescription className="text-sm">Current data counts from RTK Query</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-sm">
             <div className="space-y-1">
-              <div className="font-medium">Customers</div>
-              <div className="text-2xl font-bold text-primary">{customersData?.length || 0}</div>
+              <div className="font-medium text-xs sm:text-sm">Customers</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{customersData?.length || 0}</div>
             </div>
             <div className="space-y-1">
-              <div className="font-medium">Invoices</div>
-              <div className="text-2xl font-bold text-primary">{invoicesData?.length || 0}</div>
+              <div className="font-medium text-xs sm:text-sm">Invoices</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{invoicesData?.length || 0}</div>
             </div>
             <div className="space-y-1">
-              <div className="font-medium">Projects</div>
-              <div className="text-2xl font-bold text-primary">{projectsData?.length || 0}</div>
+              <div className="font-medium text-xs sm:text-sm">Projects</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{projectsData?.length || 0}</div>
             </div>
             <div className="space-y-1">
-              <div className="font-medium">Tasks</div>
-              <div className="text-2xl font-bold text-primary">{tasksData?.length || 0}</div>
+              <div className="font-medium text-xs sm:text-sm">Tasks</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{tasksData?.length || 0}</div>
             </div>
           </div>
         </CardContent>
