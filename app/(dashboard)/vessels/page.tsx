@@ -1,210 +1,204 @@
 // app/vessels/page.tsx
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Edit, Trash2, Ship, Loader2 } from "lucide-react"
-import { DataTable } from "@/components/data-table"
-import { useToast } from "@/hooks/use-toast"
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { DataTable } from "@/components/ui/data-table";
+import { useToast } from "@/hooks/use-toast";
 import {
   useGetVesselsQuery,
   useDeleteVesselMutation,
-} from "@/redux/Service/vessel"
+} from "@/redux/Service/vessel";
+import { Eye, Edit, Trash2, Ship } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Vessel {
-  id: string
-  name: string
-  imo_number: string
-  type: string
-  flag_state: string
-  classification_society: string
-  class_notation: string
-  build_year: number
-  shipyard: string
-  length_overall: string
-  breadth: string
-  depth: string
-  gross_tonnage: number
-  net_tonnage: number
-  deadweight: number
-  created_at: string
-  owner: string
+  id: string;
+  name: string;
+  imo_number: string;
+  type: string;
+  flag_state: string;
+  classification_society: string;
+  class_notation: string;
+  build_year: number;
+  shipyard: string;
+  length_overall: string;
+  breadth: string;
+  depth: string;
+  gross_tonnage: number;
+  net_tonnage: number;
+  deadweight: number;
+  created_at: string;
+  owner: string;
   owner_details?: {
-    id: string
-    company_name?: string
-    first_name?: string
-    last_name?: string
-  }
+    id: string;
+    company_name?: string;
+    first_name?: string;
+    last_name?: string;
+  };
 }
 
 export default function VesselsPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter();
+  const { toast } = useToast();
 
-  // RTK Query hooks
-  const { 
-    data: vessels = [], 
-    isLoading, 
-    error,
-    refetch 
-  } = useGetVesselsQuery()
-  console.log("Vessels data:", vessels)
-  const [deleteVessel] = useDeleteVesselMutation()
+  const { data: vessels = [], isLoading, error } = useGetVesselsQuery();
+  const [deleteVessel] = useDeleteVesselMutation();
 
-  // Handle errors
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load vessels",
-        variant: "destructive",
-      })
+  const shortenId = (id: string, length: number = 8) => {
+    return `${id.slice(0, length)}...`;
+  };
+
+  const formatOwnerName = (vessel: Vessel) => {
+    if (vessel.owner_details?.company_name) {
+      return vessel.owner_details.company_name;
     }
-  }, [error, toast])
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this vessel?")) return
-
-    try {
-      await deleteVessel(id).unwrap()
-      toast({
-        title: "Success",
-        description: "Vessel deleted successfully",
-      })
-    } catch (error) {
-      console.error("Error deleting vessel:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete vessel",
-        variant: "destructive",
-      })
+    if (vessel.owner_details?.first_name) {
+      return `${vessel.owner_details.first_name} ${vessel.owner_details.last_name || ''}`;
     }
-  }
-
-  const filteredVessels = vessels.filter((vessel: Vessel) =>
-    vessel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vessel.imo_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vessel.owner_details?.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    `${vessel.owner_details?.first_name} ${vessel.owner_details?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    return vessel.owner ? shortenId(vessel.owner) : "N/A";
+  };
 
   const columns = [
     {
-      accessorKey: "name",
-      header: "Vessel Name",
-      cell: ({ row }: any) => (
-        <div className="flex items-center space-x-2">
+      key: "name",
+      label: "Vessel Name",
+      sortable: true,
+      render: (value: string, vessel: Vessel) => (
+        <div className="flex items-center gap-2">
           <Ship className="h-4 w-4 text-blue-600" />
-          <span className="font-medium">{row.original.name}</span>
+          <span className="font-medium">{value}</span>
         </div>
       ),
     },
     {
-      accessorKey: "imo_number",
-      header: "IMO Number",
-      cell: ({ row }: any) => row.original.imo_number || "N/A",
+      key: "imo_number",
+      label: "IMO Number",
+      render: (value: string) => value || "N/A",
     },
     {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }: any) => <Badge variant="outline">{row.original.type}</Badge>,
-    },
-    {
-      accessorKey: "owner",
-      header: "Owner",
-      cell: ({ row }: any) => {
-        const owner = row.original.owner
-        return owner || "N/A"
-      },
-    },
-    {
-      accessorKey: "gross_tonnage",
-      header: "GT",
-      cell: ({ row }: any) => row.original.gross_tonnage ? `${row.original.gross_tonnage.toLocaleString()} GT` : "N/A",
-    },
-    {
-      accessorKey: "length_overall",
-      header: "LOA",
-      cell: ({ row }: any) => row.original.length_overall ? `${row.original.length_overall}m` : "N/A",
-    },
-    {
-      accessorKey: "build_year",
-      header: "Built",
-      cell: ({ row }: any) => row.original.build_year || "N/A",
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }: any) => (
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => router.push(`/vessels/${row.original.id}`)}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDelete(row.original.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+      key: "type",
+      label: "Type",
+      render: (value: string) => (
+        <Badge variant="outline">{value}</Badge>
       ),
     },
-  ]
+    {
+      key: "owner",
+      label: "Owner",
+      render: (_: any, vessel: Vessel) => formatOwnerName(vessel),
+    },
+    {
+      key: "gross_tonnage",
+      label: "Gross Tonnage",
+      sortable: true,
+      render: (value: number) => value ? `${value.toLocaleString()} GT` : "N/A",
+      className: "text-right",
+    },
+    {
+      key: "length_overall",
+      label: "Length",
+      render: (value: string) => value ? `${value}m` : "N/A",
+    },
+    {
+      key: "build_year",
+      label: "Built",
+      sortable: true,
+      render: (value: number) => value || "N/A",
+    },
+  ];
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  const filters = [
+    {
+      key: "type",
+      label: "Vessel Type",
+      type: "select" as const,
+      options: [
+        { value: "Bulk Carrier", label: "Bulk Carrier" },
+        { value: "Tanker", label: "Tanker" },
+        { value: "Container Ship", label: "Container Ship" },
+        { value: "General Cargo", label: "General Cargo" },
+        { value: "Passenger Ship", label: "Passenger Ship" },
+        { value: "Offshore Vessel", label: "Offshore Vessel" },
+      ],
+    },
+  ];
+
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (vessel: Vessel) => `/vessels/${vessel.id}`,
+    },
+    {
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (vessel: Vessel) => `/vessels/${vessel.id}/edit`,
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+    },
+  ];
+
+  const handleDelete = async (id: string) => {
+    await deleteVessel(id).unwrap();
+  };
+
+  const renderMobileCard = (vessel: Vessel) => (
+    <div key={vessel.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <Ship className="h-4 w-4 text-blue-600" />
+          <div>
+            <p className="font-semibold text-sm">{vessel.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {vessel.imo_number || "No IMO number"}
+            </p>
+          </div>
+        </div>
+        <Badge variant="outline">{vessel.type}</Badge>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Owner:</span>
+          <span className="font-medium">{formatOwnerName(vessel)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Gross Tonnage:</span>
+          <span className="font-medium">{vessel.gross_tonnage ? `${vessel.gross_tonnage.toLocaleString()} GT` : "N/A"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Length:</span>
+          <span className="font-medium">{vessel.length_overall ? `${vessel.length_overall}m` : "N/A"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Built:</span>
+          <span className="font-medium">{vessel.build_year || "N/A"}</span>
         </div>
       </div>
-    )
-  }
+    </div>
+  );
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Vessels</h1>
-          <p className="text-muted-foreground">Manage vessel information and specifications</p>
-        </div>
-        <Button onClick={() => router.push("/vessels/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Vessel
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>All Vessels ({filteredVessels.length})</CardTitle>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search vessels..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-64"
-                />
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={filteredVessels} />
-        </CardContent>
-      </Card>
-    </div>
-  )
+    <DataTable
+      data={vessels}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      title="Vessels"
+      description="Manage vessel information and specifications"
+      createButton={{
+        label: "Add Vessel",
+        href: "/vessels/new",
+      }}
+      isLoading={isLoading}
+      error={error}
+      onDelete={handleDelete}
+      renderMobileCard={renderMobileCard}
+    />
+  );
 }

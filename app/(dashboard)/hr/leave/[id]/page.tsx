@@ -7,14 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Check, X, Pencil, ArrowLeft, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { 
   useGetSingleLeaveQuery, 
-  useApproveLeaveMutation, 
-  useRejectLeaveMutation,
-  useDeleteLeaveMutation 
+  useDeleteLeaveMutation,
+  useUpdateLeaveMutation 
 } from "@/redux/Service/leave"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Pencil, ArrowLeft, Loader2, User, Calendar, Clock, Phone, AlertCircle, FileText, Trash, Mail, MapPin } from "lucide-react"
 
 // Interface matching your API response
 interface Leave {
@@ -67,27 +77,26 @@ export default function LeaveRequestPage() {
     refetch 
   } = useGetSingleLeaveQuery(leaveId)
   
-  const [approveLeave, { isLoading: isApproving }] = useApproveLeaveMutation()
-  const [rejectLeave, { isLoading: isRejecting }] = useRejectLeaveMutation()
   const [deleteLeave, { isLoading: isDeleting }] = useDeleteLeaveMutation()
+  const [updateLeave, { isLoading: isUpdating }] = useUpdateLeaveMutation()
 
   const [leaveRequest, setLeaveRequest] = useState<LeaveWithEmployeeDetails | null>(null)
+  const [isDeletingDialogOpen, setIsDeletingDialogOpen] = useState(false)
 
   useEffect(() => {
     if (leaveData) {
       // Transform the API data to include employee details
-      // In a real app, you'd fetch employee details from your employees API
       const transformedData: LeaveWithEmployeeDetails = {
         ...leaveData,
         employee_details: {
           id: leaveData.employee,
-          firstName: "Employee", // You should fetch this from your employees API
-          lastName: leaveData.employee.name.slice(0, 8), // Placeholder
-          employeeId: `EMP-${leaveData.employee.name.slice(0, 4)}`, // Placeholder
-          position: "Staff", // Placeholder
-          department: "Engineering", // Placeholder
-          email: "employee@company.com", // Placeholder
-          phone: leaveData.contact || "Not provided" // Placeholder
+          firstName: "Employee",
+          lastName: leaveData.employee.name.slice(0, 8),
+          employeeId: `EMP-${leaveData.employee.name.slice(0, 4)}`,
+          position: "Staff",
+          department: "Engineering",
+          email: "employee@company.com",
+          phone: leaveData.contact || "Not provided"
         },
         status: leaveData.status || "PENDING",
         created_at: leaveData.created_at || leaveData.start_date
@@ -109,15 +118,36 @@ export default function LeaveRequestPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      PENDING: { className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-      APPROVED: { className: "bg-green-100 text-green-800 border-green-300" },
-      REJECTED: { className: "bg-red-100 text-red-800 border-red-300" },
-      CANCELLED: { className: "bg-gray-100 text-gray-800 border-gray-300" },
+      PENDING: { 
+        className: "bg-yellow-100 text-yellow-800 border-yellow-300",
+        icon: Clock
+      },
+      APPROVED: { 
+        className: "bg-green-100 text-green-800 border-green-300",
+        icon: Calendar
+      },
+      REJECTED: { 
+        className: "bg-red-100 text-red-800 border-red-300",
+        icon: AlertCircle
+      },
+      CANCELLED: { 
+        className: "bg-gray-100 text-gray-800 border-gray-300",
+        icon: AlertCircle
+      },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING
+    const IconComponent = config.icon
 
-    return <Badge className={config.className}>{status}</Badge>
+    return (
+      <Badge 
+        variant="outline" 
+        className={`${config.className} flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1 border`}
+      >
+        <IconComponent className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+        <span className="capitalize">{status.toLowerCase()}</span>
+      </Badge>
+    )
   }
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -127,7 +157,7 @@ export default function LeaveRequestPage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     })
   }
@@ -136,55 +166,11 @@ export default function LeaveRequestPage() {
     const start = new Date(startDate)
     const end = new Date(endDate)
     const timeDiff = end.getTime() - start.getTime()
-    return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1 // +1 to include both start and end dates
-  }
-
-  const handleApprove = async () => {
-    if (!leaveRequest) return
-
-    try {
-      await approveLeave(leaveRequest.id).unwrap()
-      toast({
-        title: "Success",
-        description: "Leave request approved successfully",
-      })
-      // Refetch the leave data to get updated status
-      refetch()
-    } catch (error) {
-      console.error("Error approving leave request:", error)
-      toast({
-        title: "Error",
-        description: "Failed to approve leave request",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleReject = async () => {
-    if (!leaveRequest) return
-
-    try {
-      await rejectLeave(leaveRequest.id).unwrap()
-      toast({
-        title: "Success",
-        description: "Leave request rejected",
-      })
-      // Refetch the leave data to get updated status
-      refetch()
-    } catch (error) {
-      console.error("Error rejecting leave request:", error)
-      toast({
-        title: "Error",
-        description: "Failed to reject leave request",
-        variant: "destructive",
-      })
-    }
+    return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
   }
 
   const handleDelete = async () => {
     if (!leaveRequest) return
-
-    if (!confirm("Are you sure you want to delete this leave request?")) return
 
     try {
       await deleteLeave(leaveRequest.id).unwrap()
@@ -192,6 +178,7 @@ export default function LeaveRequestPage() {
         title: "Success",
         description: "Leave request deleted successfully",
       })
+      setIsDeletingDialogOpen(false)
       router.push("/hr/leave")
     } catch (error) {
       console.error("Error deleting leave request:", error)
@@ -200,6 +187,7 @@ export default function LeaveRequestPage() {
         description: "Failed to delete leave request",
         variant: "destructive",
       })
+      setIsDeletingDialogOpen(false)
     }
   }
 
@@ -212,10 +200,25 @@ export default function LeaveRequestPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <p>Loading leave request details...</p>
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <Button variant="outline" onClick={() => router.push("/hr/leave")} className="mb-6">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Leave Requests
+          </Button>
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2 space-y-4">
+                <div className="h-48 bg-gray-200 rounded"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-48 bg-gray-200 rounded"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -224,28 +227,23 @@ export default function LeaveRequestPage() {
   // Error state
   if (error || !leaveRequest) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" asChild>
-            <Link href="/hr/leave">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back</span>
-            </Link>
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <Button variant="outline" onClick={() => router.push("/hr/leave")} className="mb-6">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Leave Requests
           </Button>
-          <h2 className="text-2xl font-bold">Leave Request Details</h2>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                {error ? "Failed to load leave request details." : "Leave request not found."}
-              </p>
-              <Button onClick={() => refetch()} className="mt-4">
+          <Card className="max-w-md mx-auto">
+            <CardContent className="pt-6 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-red-600 mb-2">Leave Request Not Found</h2>
+              <p className="text-gray-600 mb-4">The requested leave request could not be loaded.</p>
+              <Button onClick={() => refetch()}>
                 Try Again
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -253,215 +251,269 @@ export default function LeaveRequestPage() {
   const totalDays = calculateTotalDays(leaveRequest.start_date, leaveRequest.end_date)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" asChild>
-            <Link href="/hr/leave">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <h2 className="text-2xl font-bold">Leave Request Details</h2>
-        </div>
-        <div className="flex gap-2">
-          {leaveRequest.status === "PENDING" && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={handleEdit}
-                disabled={isApproving || isRejecting}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-              <Button 
-                variant="default" 
-                className="bg-green-600 hover:bg-green-700"
-                onClick={handleApprove}
-                disabled={isApproving || isRejecting}
-              >
-                {isApproving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="mr-2 h-4 w-4" />
-                )}
-                Approve
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={handleReject}
-                disabled={isApproving || isRejecting}
-              >
-                {isRejecting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="mr-2 h-4 w-4" />
-                )}
-                Reject
-              </Button>
-            </>
-          )}
-          {(leaveRequest.status === "PENDING" || leaveRequest.status === "REJECTED") && (
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+              size="sm"
+              onClick={() => router.push("/hr/leave")}
+              className="h-9 w-9 p-0 sm:h-auto sm:w-auto sm:px-3"
             >
-              {isDeleting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <X className="mr-2 h-4 w-4" />
-              )}
-              Delete
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-          )}
+            <div className="sm:hidden">
+              {getStatusBadge(leaveRequest.status || "PENDING")}
+            </div>
+          </div>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              size="sm" 
+              onClick={handleEdit}
+              className="flex-1 sm:flex-none min-w-[80px]"
+            >
+              <Pencil className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="sm:inline">Edit</span>
+            </Button>
+            <AlertDialog open={isDeletingDialogOpen} onOpenChange={setIsDeletingDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  className="flex-1 sm:flex-none text-white min-w-[90px]"
+                >
+                  <Trash className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="sm:inline">Delete</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the leave request
+                    and all associated data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Employee Information</CardTitle>
+        {/* Main Header */}
+        <Card className="mb-6">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="hidden sm:flex">
+                    {getStatusBadge(leaveRequest.status || "PENDING")}
+                  </div>
+                  <CardTitle className="text-xl sm:text-2xl lg:text-3xl truncate">
+                    Leave Request Details
+                  </CardTitle>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span>{leaveRequest.employee_details?.firstName} {leaveRequest.employee_details?.lastName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Submitted on {formatDate(leaveRequest.created_at || leaveRequest.start_date)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:flex">
+                {getStatusBadge(leaveRequest.status || "PENDING")}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center mb-6">
-              <Avatar className="h-24 w-24">
-                <AvatarImage
-                  src="/placeholder.svg"
-                  alt={`${leaveRequest.employee_details?.firstName} ${leaveRequest.employee_details?.lastName}`}
-                />
-                <AvatarFallback>
-                  {leaveRequest.employee_details ? 
-                    getInitials(leaveRequest.employee_details.firstName, leaveRequest.employee_details.lastName) 
-                    : "EE"
-                  }
-                </AvatarFallback>
-              </Avatar>
-              <h3 className="mt-4 text-xl font-semibold">
-                {leaveRequest.employee_details?.firstName} {leaveRequest.employee_details?.lastName}
-              </h3>
-              <p className="text-muted-foreground">{leaveRequest.employee_details?.position}</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-sm font-medium">Department</div>
-                <div className="text-sm">{leaveRequest.employee_details?.department}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-sm font-medium">Employee ID</div>
-                <div className="text-sm">{leaveRequest.employee_details?.employeeId}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-sm font-medium">Email</div>
-                <div className="text-sm">{leaveRequest.employee_details?.email}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-sm font-medium">Phone</div>
-                <div className="text-sm">{leaveRequest.employee_details?.phone}</div>
-              </div>
-            </div>
-          </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Leave Request</CardTitle>
-              <div>{getStatusBadge(leaveRequest.status || "PENDING")}</div>
-            </div>
-            <CardDescription>
-              Request submitted on {formatDate(leaveRequest.created_at || leaveRequest.start_date)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium mb-1">Leave Type</h4>
-                <p className="font-medium">{leaveRequest.type}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Total Days</h4>
-                <p className="font-medium">{totalDays} days</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Start Date</h4>
-                <p className="font-medium">{formatDate(leaveRequest.start_date)}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">End Date</h4>
-                <p className="font-medium">{formatDate(leaveRequest.end_date)}</p>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Employee Information - Sidebar */}
+          <div className="xl:col-span-1 space-y-6">
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="h-5 w-5 text-gray-600" />
+                  Employee Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col items-center text-center">
+                  <Avatar className="h-20 w-20 mb-3">
+                    <AvatarImage
+                      src="/placeholder.svg"
+                      alt={`${leaveRequest.employee_details?.firstName} ${leaveRequest.employee_details?.lastName}`}
+                    />
+                    <AvatarFallback className="text-lg">
+                      {leaveRequest.employee_details ? 
+                        getInitials(leaveRequest.employee_details.firstName, leaveRequest.employee_details.lastName) 
+                        : "EE"
+                      }
+                    </AvatarFallback>
+                  </Avatar>
+                  <h3 className="text-xl font-semibold">
+                    {leaveRequest.employee_details?.firstName} {leaveRequest.employee_details?.lastName}
+                  </h3>
+                  <p className="text-muted-foreground">{leaveRequest.employee_details?.position}</p>
+                </div>
 
-            <div>
-              <h4 className="text-sm font-medium mb-1">Reason for Leave</h4>
-              <p className="p-3 bg-muted rounded-md">{leaveRequest.reason}</p>
-            </div>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">Department</p>
+                    <p className="font-semibold">{leaveRequest.employee_details?.department}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">Employee ID</p>
+                    <p className="font-semibold">{leaveRequest.employee_details?.employeeId}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </div>
+                    <p className="font-semibold text-sm break-all">{leaveRequest.employee_details?.email}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      <Phone className="h-4 w-4" />
+                      Phone
+                    </div>
+                    <p className="font-semibold">{leaveRequest.employee_details?.phone}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium mb-1">Contact During Leave</h4>
-                <p className="font-medium">{leaveRequest.contact || "Not provided"}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-1">Emergency Contact</h4>
-                <p className="font-medium">{leaveRequest.emergency_contact || "Not provided"}</p>
-              </div>
-            </div>
+           
+          </div>
 
+          {/* Leave Details - Main Content */}
+          <div className="xl:col-span-2 space-y-6">
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-gray-600" />
+                  Leave Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">Leave Type</p>
+                    <p className="font-semibold text-lg">{leaveRequest.type}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">Total Days</p>
+                    <p className="font-semibold text-lg">{totalDays} days</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">Start Date</p>
+                    <p className="font-semibold">{formatDate(leaveRequest.start_date)}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <p className="text-sm text-gray-600 mb-1">End Date</p>
+                    <p className="font-semibold">{formatDate(leaveRequest.end_date)}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Reason for Leave
+                  </h4>
+                  <div className="p-4 bg-gray-50 rounded-lg border text-sm sm:text-base">
+                    {leaveRequest.reason}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <Phone className="h-4 w-4" />
+                      Contact During Leave
+                    </div>
+                    <p className="font-semibold">{leaveRequest.contact || "Not provided"}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Emergency Contact
+                    </div>
+                    <p className="font-semibold">{leaveRequest.emergency_contact || "Not provided"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Approval Details */}
             {(leaveRequest.status === "APPROVED" || leaveRequest.status === "REJECTED") && (
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-medium mb-2">
-                  {leaveRequest.status === "APPROVED" ? "Approval Details" : "Rejection Details"}
-                </h4>
-                {leaveRequest.approved_by_details ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">
+                    {leaveRequest.status === "APPROVED" ? "Approval Details" : "Rejection Details"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 mb-4">
+                    <Avatar className="h-12 w-12">
                       <AvatarImage
                         src="/placeholder.svg"
-                        alt={`${leaveRequest.approved_by_details.firstName} ${leaveRequest.approved_by_details.lastName}`}
+                        alt={`${leaveRequest.approved_by_details?.firstName} ${leaveRequest.approved_by_details?.lastName}`}
                       />
                       <AvatarFallback>
-                        {getInitials(leaveRequest.approved_by_details.firstName, leaveRequest.approved_by_details.lastName)}
+                        {leaveRequest.approved_by_details ? 
+                          getInitials(leaveRequest.approved_by_details.firstName, leaveRequest.approved_by_details.lastName)
+                          : "AD"
+                        }
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">
-                        {leaveRequest.approved_by_details.firstName} {leaveRequest.approved_by_details.lastName}
+                      <div className="font-medium text-lg">
+                        {leaveRequest.approved_by_details ? 
+                          `${leaveRequest.approved_by_details.firstName} ${leaveRequest.approved_by_details.lastName}`
+                          : "Administrator"
+                        }
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {leaveRequest.approved_by_details.position}
-                        {leaveRequest.approved_date && ` • on ${formatDate(leaveRequest.approved_date)}`}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>AD</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">Administrator</div>
-                      <div className="text-xs text-muted-foreground">
-                        {leaveRequest.approved_date ? `on ${formatDate(leaveRequest.approved_date)}` : "Action taken"}
+                      <div className="text-sm text-muted-foreground">
+                        {leaveRequest.approved_by_details?.position}
+                        {leaveRequest.approved_date && ` • ${formatDate(leaveRequest.approved_date)}`}
                       </div>
                     </div>
                   </div>
-                )}
 
-                {leaveRequest.comments && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-1">Comments</h4>
-                    <p className="p-3 bg-muted rounded-md">{leaveRequest.comments}</p>
-                  </div>
-                )}
-              </div>
+                  {leaveRequest.comments && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3">Comments</h4>
+                      <div className="p-4 bg-gray-50 rounded-lg border text-sm sm:text-base">
+                        {leaveRequest.comments}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

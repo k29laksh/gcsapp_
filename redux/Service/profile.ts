@@ -4,7 +4,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { RootState } from "../store";
 
 const baseQueryWithAuth = fetchBaseQuery({
-  baseUrl: "http://localhost:8000/api/v1/profiles",
+  baseUrl:  `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/profiles`,
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.userInfo?.access;
     if (token) {

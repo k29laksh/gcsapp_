@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const payrollApi = createApi({
   reducerPath: 'payrollApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://localhost:8000/payroll',
+    baseUrl:  `${process.env.NEXT_PUBLIC_BACKEND_URL}/payroll`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

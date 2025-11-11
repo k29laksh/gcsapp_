@@ -1,215 +1,22 @@
+// app/sales/invoices/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import type { ColumnDef } from "@tanstack/react-table";
-import {
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  Plus,
-  FileText,
-  DollarSign,
-  Clock,
-  AlertTriangle,
-  Download,
-  Printer,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { useMemo } from "react";
+import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/components/ui/use-toast";
-import { DataTableEnhanced } from "@/components/ui/data-table-enhanced";
-import { PageHeader } from "@/components/ui/page-header";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { 
   useGetInvoicesQuery, 
   useDeleteInvoiceMutation,
   useLazyDownloadInvoicePdfQuery 
 } from "@/redux/Service/invoice";
-
-interface Invoice {
-  id: string;
-  invoice_no: string;
-  invoice_date: string;
-  due_date: string;
-  status: string;
-  total_amount: string;
-  customer: string;
-  project: string;
-  vessel: string;
-  place_of_supply: string;
-  items: Array<{
-    id: string;
-    description: string;
-    quantity: number;
-    unit_price: string;
-    amount: string;
-  }>;
-  pdf: string;
-  cgst: string;
-  sgst: string;
-  igst: string;
-  po_no: string | null;
-  our_ref: string | null;
-}
-
-interface InvoiceStats {
-  totalInvoices: number;
-  paidInvoices: number;
-  pendingInvoices: number;
-  overdueInvoices: number;
-  totalAmount: number;
-  paidAmount: number;
-  pendingAmount: number;
-  overdueAmount: number;
-}
+import { Eye, Edit, Trash2, Download } from "lucide-react";
+import Link from "next/link";
 
 export default function InvoicesPage() {
-  const router = useRouter();
   const { toast } = useToast();
-  
-  // RTK Query hooks
   const { data: invoices = [], isLoading, error } = useGetInvoicesQuery({});
   const [deleteInvoice] = useDeleteInvoiceMutation();
   const [downloadInvoicePdf] = useLazyDownloadInvoicePdfQuery();
-
-  const [stats, setStats] = useState<InvoiceStats>({
-    totalInvoices: 0,
-    paidInvoices: 0,
-    pendingInvoices: 0,
-    overdueInvoices: 0,
-    totalAmount: 0,
-    paidAmount: 0,
-    pendingAmount: 0,
-    overdueAmount: 0,
-  });
-
-  // Calculate stats from invoices data
-  useEffect(() => {
-    if (invoices && invoices.length > 0) {
-      const totalInvoices = invoices.length;
-      let paidInvoices = 0;
-      let pendingInvoices = 0;
-      let overdueInvoices = 0;
-      let totalAmount = 0;
-      let paidAmount = 0;
-      let pendingAmount = 0;
-      let overdueAmount = 0;
-
-      invoices.forEach(invoice => {
-        const amount = parseFloat(invoice.total_amount);
-        totalAmount += amount;
-
-        switch (invoice.status) {
-          case "Paid":
-            paidInvoices++;
-            paidAmount += amount;
-            break;
-          case "Pending":
-            pendingInvoices++;
-            pendingAmount += amount;
-            break;
-          case "Overdue":
-            overdueInvoices++;
-            overdueAmount += amount;
-            break;
-          default:
-            pendingInvoices++;
-            pendingAmount += amount;
-        }
-      });
-
-      setStats({
-        totalInvoices,
-        paidInvoices,
-        pendingInvoices,
-        overdueInvoices,
-        totalAmount,
-        paidAmount,
-        pendingAmount,
-        overdueAmount,
-      });
-    }
-  }, [invoices]);
-
-  // Handle errors from RTK Query
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching invoices:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load invoices",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteInvoice(id).unwrap();
-      
-      toast({
-        title: "Success",
-        description: "Invoice deleted successfully",
-      });
-    } catch (error: any) {
-      console.error("Error deleting invoice:", error);
-      toast({
-        title: "Error",
-        description: error?.data?.message || "Failed to delete invoice",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadPdf = async (id: string) => {
-    try {
-      const result = await downloadInvoicePdf(id).unwrap();
-      
-      // Create a blob URL and trigger download
-      const blob = new Blob([result], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Find the invoice to get the invoice number for filename
-      const invoice = invoices.find(inv => inv.id === id);
-      link.download = `${invoice?.invoice_no || 'invoice'}.pdf`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-      toast({
-        title: "Error",
-        description: "Failed to download PDF",
-        variant: "destructive",
-      });
-    }
-  };
 
   const formatCurrency = (amount: string | number) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -229,6 +36,11 @@ export default function InvoicesPage() {
     });
   };
 
+  const shortenId = (id: string, length: number = 8) => {
+    if (!id) return "N/A";
+    return `${id.slice(0, length)}...`;
+  };
+
   const getStatusColor = (status: string) => {
     const statusColors = {
       "Draft": "bg-gray-100 text-gray-800",
@@ -236,227 +48,176 @@ export default function InvoicesPage() {
       "Paid": "bg-green-100 text-green-800",
       "Overdue": "bg-red-100 text-red-800",
       "Cancelled": "bg-red-100 text-red-800",
+      "Pending": "bg-yellow-100 text-yellow-800",
     };
     return statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800";
   };
 
-  const columns: ColumnDef<Invoice>[] = [
+  const columns = [
     {
-      accessorKey: "invoice_no",
-      header: "Invoice #",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("invoice_no")}</div>
+      key: "invoice_no",
+      label: "Invoice #",
+      sortable: true,
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-mono text-muted-foreground">
+          {shortenId(value)}
+        </span>
       ),
     },
     {
-      accessorKey: "customer",
-      header: "Customer ID",
-      cell: ({ row }) => {
-        const customerId = row.getValue("customer") as string;
-        return <div className="text-sm">{customerId.slice(0, 8)}...</div>;
-      },
+      key: "project",
+      label: "Project",
+      render: (value: string) => (
+        <span className="font-mono text-muted-foreground">
+          {value ? shortenId(value) : "No project"}
+        </span>
+      ),
     },
     {
-      accessorKey: "project",
-      header: "Project ID",
-      cell: ({ row }) => {
-        const projectId = row.getValue("project") as string;
-        return projectId ? (
-          <div className="text-sm">{projectId.slice(0, 8)}...</div>
-        ) : (
-          <span className="text-muted-foreground">No project</span>
-        );
-      },
+      key: "invoice_date",
+      label: "Invoice Date",
+      sortable: true,
+      render: (value: string) => formatDate(value),
     },
     {
-      accessorKey: "invoice_date",
-      header: "Invoice Date",
-      cell: ({ row }) => formatDate(row.getValue("invoice_date")),
+      key: "due_date",
+      label: "Due Date",
+      sortable: true,
+      render: (value: string) => formatDate(value),
     },
     {
-      accessorKey: "due_date",
-      header: "Due Date",
-      cell: ({ row }) => formatDate(row.getValue("due_date")),
+      key: "total_amount",
+      label: "Amount",
+      sortable: true,
+      render: (value: string) => formatCurrency(value),
+      className: "text-right",
     },
     {
-      accessorKey: "total_amount",
-      header: "Total Amount",
-      cell: ({ row }) => formatCurrency(row.getValue("total_amount")),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as string;
-        return (
-          <Badge className={getStatusColor(status)}>
-            {status}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const invoice = row.original;
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => router.push(`/sales/invoice/${invoice.id}`)}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(`/sales/invoice/${invoice.id}/preview`)}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Preview
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDownloadPdf(invoice.id)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => router.push(`/sales/invoice/${invoice.id}/edit`)}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete
-                      the invoice.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(invoice.id)}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
+      key: "status",
+      label: "Status",
+      render: (value: string) => (
+        <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(value)}`}>
+          {value}
+        </span>
+      ),
     },
   ];
 
-  const breadcrumbs = [
-    { label: "Sales", href: "/sales" },
-    { label: "Invoices" },
+  const filters = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select" as const,
+      options: [
+        { value: "Draft", label: "Draft" },
+        { value: "Sent", label: "Sent" },
+        { value: "Paid", label: "Paid" },
+        { value: "Pending", label: "Pending" },
+        { value: "Overdue", label: "Overdue" },
+        { value: "Cancelled", label: "Cancelled" },
+      ],
+    },
   ];
+
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (item: any) => `/sales/invoice/${item.id}`,
+    },
+    {
+      type: "download" as const,
+      label: "Download PDF",
+      icon: <Download className="h-4 w-4 mr-2" />,
+    },
+    {
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (item: any) => `/sales/invoice/${item.id}/edit`,
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+    },
+  ];
+
+  const handleDelete = async (id: string) => {
+    await deleteInvoice(id).unwrap();
+  };
+
+  const handleDownload = async (id: string) => {
+    const result = await downloadInvoicePdf(id).unwrap();
+    const invoice = invoices.find(inv => inv.id === id);
+    const blob = new Blob([result], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${invoice?.invoice_no || 'invoice'}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const renderMobileCard = (invoice: any) => (
+    <Link key={invoice.id} href={`/sales/invoice/${invoice.id}`}>
+      <div className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <p className="font-semibold text-sm">{invoice.invoice_no}</p>
+            <p className="text-xs text-muted-foreground font-mono">
+              {shortenId(invoice.customer)}
+            </p>
+          </div>
+          <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(invoice.status)}`}>
+            {invoice.status}
+          </span>
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Project:</span>
+            <span className="font-medium font-mono">
+              {invoice.project ? shortenId(invoice.project) : "No project"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Amount:</span>
+            <span className="font-medium">{formatCurrency(invoice.total_amount)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Due Date:</span>
+            <span className="font-medium">{formatDate(invoice.due_date)}</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Invoices"
-        description="Manage your invoices and track payments"
-        breadcrumbs={breadcrumbs}
-        action={
-          <Button onClick={() => router.push("/sales/invoice/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invoice
-          </Button>
-        }
-      />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Invoices
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInvoices}</div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(stats.totalAmount)} total value
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.paidInvoices}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(stats.paidAmount)} collected
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Invoices
-            </CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.pendingInvoices}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(stats.pendingAmount)} pending
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Overdue Invoices
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.overdueInvoices}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {formatCurrency(stats.overdueAmount)} overdue
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <DataTableEnhanced
-        columns={columns}
-        data={invoices}
-        searchKey="invoice_no"
-        searchPlaceholder="Search invoices..."
-        onAdd={() => router.push("/sales/invoice/new")}
-        addLabel="Create Invoice"
-        loading={isLoading}
-      />
-    </div>
+    <DataTable
+      data={invoices}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      title="Invoices"
+      description="Manage your invoices and track payments"
+      createButton={{
+        label: "Create Invoice",
+        href: "/sales/invoice/new",
+      }}
+      isLoading={isLoading}
+      error={error}
+      onDelete={handleDelete}
+      onDownload={handleDownload}
+      renderMobileCard={renderMobileCard}
+    />
   );
 }

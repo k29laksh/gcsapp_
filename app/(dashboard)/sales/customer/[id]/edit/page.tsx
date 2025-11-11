@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useGetSingleCustomerQuery } from "@/redux/Service/customer"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { CustomerDetails } from "@/components/customerEdit-form"
 
 export default function EditCustomerPage() {
   const params = useParams()
@@ -71,7 +72,7 @@ export default function EditCustomerPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Edit Customer" description="Update customer information" breadcrumbs={breadcrumbs} />
-      <CustomerForm customer={customerData} isEditing />
+      <CustomerDetails customer={customerData} isEditing />
     </div>
   )
 }

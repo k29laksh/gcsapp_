@@ -67,7 +67,7 @@ export default function VendorPaymentsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/purchase/payment/${id}`, {
+      const response = await fetch(`/api/purchase/sales/payment/${id}`, {
         method: "DELETE",
       })
 
@@ -187,13 +187,13 @@ export default function VendorPaymentsPage() {
         return (
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/purchase/payment/${payment.id}`}>
+              <Link href={`/purchase/sales/payment/${payment.id}`}>
                 <Eye className="h-4 w-4" />
                 <span className="sr-only">View</span>
               </Link>
             </Button>
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/purchase/payment/${payment.id}/edit`}>
+              <Link href={`/purchase/sales/payment/${payment.id}/edit`}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit</span>
               </Link>
@@ -227,7 +227,7 @@ export default function VendorPaymentsPage() {
       <div className="flex justify-between">
         <h2 className="text-2xl font-bold">Vendor Payments</h2>
         <Button asChild>
-          <Link href="/purchase/payment/new">
+          <Link href="/purchase/sales/payment/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Payment
           </Link>
@@ -243,3 +243,4 @@ export default function VendorPaymentsPage() {
     </div>
   )
 }
+

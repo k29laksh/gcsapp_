@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/ui/data-table"
 import { Eye, Pencil, Plus, Trash2, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import {

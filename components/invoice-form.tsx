@@ -13,62 +13,101 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker"
 import { Plus, Trash2, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { INDIAN_STATES, invoiceItemSchema, invoiceSchema } from "@/schema/invoiceSchema"
+import { useGetCustomersQuery } from "@/redux/Service/customer"
+import { useGetVesselsQuery } from "@/redux/Service/vessel"
+import { useGetProjectsQuery } from "@/redux/Service/projects"
+import { 
+  useAddInvoiceMutation, 
+  useUpdateInvoiceMutation,
+  useGetSingleInvoiceQuery 
+} from "@/redux/Service/invoice"
+import { useRouter } from "next/navigation"
 
-
+// Enhanced schema with better validation
+const invoiceSchema = z.object({
+  customer: z.string().min(1, "Customer is required"),
+  project: z.string().min(1, "Project is required"),
+  vessel: z.string().min(1, "Vessel is required"),
+  invoice_date: z.date({
+    required_error: "Invoice date is required",
+  }),
+  due_date: z.date({
+    required_error: "Due date is required",
+  }),
+  status: z.string().default("Draft"),
+  place_of_supply: z.string().min(1, "Place of supply is required"),
+  // These fields are now interpreted as monetary amounts (₹)
+  sgst: z.number().min(0, "SGST cannot be negative").default(0),
+  cgst: z.number().min(0, "CGST cannot be negative").default(0),
+  igst: z.number().min(0, "IGST cannot be negative").default(0),
+  po_no: z.string().optional().default(""),
+  our_ref: z.string().optional().default(""),
+  items: z.array(
+    z.object({
+      description: z.string().min(1, "Description is required"),
+      quantity: z.number().min(0.01, "Quantity must be at least 0.01").default(1),
+      unit_price: z.number().min(0, "Unit price must be positive").default(0),
+    })
+  ).min(1, "At least one item is required"),
+})
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>
 
 interface InvoiceFormProps {
-  onSubmit: (data: any) => void
-  isSubmitting: boolean
   initialData?: any
   isEditing?: boolean
+  invoiceId?: string
+  onSuccess?: () => void
 }
 
-// Indian states for place of supply
+const INDIAN_STATES = [
+  { code: "27", name: "Maharashtra" },
+  { code: "07", name: "Delhi" },
+  { code: "33", name: "Tamil Nadu" },
+  { code: "21", name: "Odisha" },
+  { code: "24", name: "Gujarat" },
+]
 
-
-export function InvoiceForm({ onSubmit, isSubmitting, initialData, isEditing = false }: InvoiceFormProps) {
-  const [customers, setCustomers] = useState<any[]>([])
-  const [projects, setProjects] = useState<any[]>([])
-  const [vessels, setVessels] = useState<any[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
-  const [isLoadingData, setIsLoadingData] = useState(true)
+export function InvoiceForm({ initialData, isEditing = false, invoiceId, onSuccess }: InvoiceFormProps) {
   const { toast } = useToast()
+  const { data: customersData = [], isLoading: customersLoading } = useGetCustomersQuery({})
+  const { data: vesselsData = [], isLoading: vesselsLoading } = useGetVesselsQuery({})
+  const { data: projectsData = [], isLoading: projectsLoading } = useGetProjectsQuery({})
+  
+  // RTK Query mutations and queries
+  const [addInvoice, { isLoading: isAdding }] = useAddInvoiceMutation()
+  const [updateInvoice, { isLoading: isUpdating }] = useUpdateInvoiceMutation()
+  
+  // Fetch invoice data if editing
+  const { data: existingInvoice, isLoading: isInvoiceLoading } = useGetSingleInvoiceQuery(
+    invoiceId || '',
+    { skip: !isEditing || !invoiceId }
+  )
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      invoiceNumber: "",
-      invoiceDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      customerId: "",
-      projectId: "",
-      vesselName: "",
-      poNumber: "",
-      placeOfSupply: "",
-      ourReference: "",
-      contactPerson: "",
-      paymentTerms: "Net 30",
-      paymentDue: 30,
+      customer: "",
+      project: "",
+      vessel: "",
+      invoice_date: new Date(),
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: "Draft",
+      place_of_supply: "",
+      sgst: 0,
+      cgst: 0,
+      igst: 0,
+      po_no: "",
+      our_ref: "",
       items: [
         {
           description: "",
           quantity: 1,
-          unitPrice: 0,
-          hsn: "",
-          sacCode: "",
+          unit_price: 0,
         },
       ],
-      notes: "",
-      termsAndConditions: "",
-      discountType: "PERCENTAGE",
-      discountValue: 0,
-      shippingAmount: 0,
-      adjustmentLabel: "",
-      adjustmentAmount: 0,
     },
+    mode: "onChange", // Validate on change for better UX
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -77,120 +116,62 @@ export function InvoiceForm({ onSubmit, isSubmitting, initialData, isEditing = f
   })
 
   const watchedItems = form.watch("items")
-  const watchedCustomerId = form.watch("customerId")
-  const watchedPlaceOfSupply = form.watch("placeOfSupply")
-  const watchedDiscountType = form.watch("discountType")
-  const watchedDiscountValue = form.watch("discountValue")
-  const watchedShippingAmount = form.watch("shippingAmount")
-  const watchedAdjustmentAmount = form.watch("adjustmentAmount")
+  // These watched fields now represent the direct monetary amount entered by the user
+  const watchedSgst = form.watch("sgst")
+  const watchedCgst = form.watch("cgst")
+  const watchedIgst = form.watch("igst")
 
+  const router = useRouter()
+
+  // Effect for initial data (prop)
   useEffect(() => {
-    fetchInitialData()
-  }, [])
+    if (initialData) {
+      populateFormWithData(initialData)
+    }
+  }, [initialData])
 
+  // Effect for existing invoice data (from API)
   useEffect(() => {
-    if (watchedCustomerId) {
-      const customer = customers.find((c) => c.id === watchedCustomerId)
-      setSelectedCustomer(customer)
-
-      // Reset contact person when customer changes
-      if (!isEditing) {
-        form.setValue("contactPerson", "")
-      }
+    if (existingInvoice && isEditing) {
+      populateFormWithData(existingInvoice)
     }
-  }, [watchedCustomerId, customers, form, isEditing])
+  }, [existingInvoice, isEditing])
 
-  useEffect(() => {
-    if (initialData && !isLoadingData) {
-      // Set form values from initial data
-      form.reset({
-        invoiceNumber: initialData.invoiceNumber || "",
-        invoiceDate: initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date(),
-        dueDate: initialData.dueDate ? new Date(initialData.dueDate) : new Date(),
-        customerId: initialData.customerId || "",
-        projectId: initialData.projectId || "",
-        vesselName: initialData.vesselName || "",
-        poNumber: initialData.poNumber || "",
-        placeOfSupply: initialData.placeOfSupply || "",
-        ourReference: initialData.ourReference || "",
-        contactPerson: initialData.contactPerson || "",
-        paymentTerms: initialData.paymentTerms || "Net 30",
-        paymentDue: initialData.paymentDue || 30,
-        items:
-          initialData.items?.length > 0
-            ? initialData.items.map((item: any) => ({
-                description: item.description || item.name || "",
-                quantity: Number(item.quantity) || 1,
-                unitPrice: Number(item.unitPrice) || 0,
-                hsn: item.hsn || "",
-                sacCode: item.sacCode || "",
-              }))
-            : [
-                {
-                  description: "",
-                  quantity: 1,
-                  unitPrice: 0,
-                  hsn: "",
-                  sacCode: "",
-                },
-              ],
-        notes: initialData.notes || "",
-        termsAndConditions: initialData.termsAndConditions || initialData.terms || "",
-        discountType: initialData.discountType || "PERCENTAGE",
-        discountValue: Number(initialData.discountValue) || 0,
-        shippingAmount: Number(initialData.shippingAmount) || 0,
-        adjustmentLabel: initialData.adjustmentLabel || "",
-        adjustmentAmount: Number(initialData.adjustmentAmount) || 0,
-      })
-    }
-  }, [initialData, isLoadingData, form])
-
-  const fetchInitialData = async () => {
-    try {
-      setIsLoadingData(true)
-
-      // Fetch customers, projects, and vessels in parallel
-      const [customersRes, projectsRes, vesselsRes, invoiceNumberRes] = await Promise.all([
-        fetch("/api/sales/customer"),
-        fetch("/api/projects"),
-        fetch("/api/vessels"),
-        !isEditing ? fetch("/api/sales/invoice/generate-number") : Promise.resolve(null),
-      ])
-
-      if (customersRes.ok) {
-        const customersData = await customersRes.json()
-        setCustomers(customersData)
-      }
-
-      if (projectsRes.ok) {
-        const projectsData = await projectsRes.json()
-        setProjects(projectsData)
-      }
-
-      if (vesselsRes.ok) {
-        const vesselsData = await vesselsRes.json()
-        setVessels(vesselsData)
-      }
-
-      if (invoiceNumberRes?.ok && !isEditing) {
-        const { invoiceNumber } = await invoiceNumberRes.json()
-        form.setValue("invoiceNumber", invoiceNumber)
-      }
-    } catch (error) {
-      console.error("Error fetching initial data:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load form data",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoadingData(false)
-    }
+  const populateFormWithData = (data: any) => {
+    console.log("Populating form with data:", data)
+    form.reset({
+      customer: data.customer?.id?.toString() || data.customer?.toString() || "",
+      project: data.project?.id?.toString() || data.project?.toString() || "",
+      vessel: data.vessel?.id?.toString() || data.vessel?.toString() || "",
+      invoice_date: data.invoice_date ? new Date(data.invoice_date) : new Date(),
+      due_date: data.due_date ? new Date(data.due_date) : new Date(),
+      status: data.status || "Draft",
+      place_of_supply: data.place_of_supply || "",
+      // Use the stored GST *amounts* if they exist, otherwise default to 0
+      sgst: data.sgst || 0, 
+      cgst: data.cgst || 0,
+      igst: data.igst || 0,
+      po_no: data.po_no || "",
+      our_ref: data.our_ref || "",
+      items: data.items?.length > 0
+        ? data.items.map((item: any) => ({
+            description: item.description || "",
+            quantity: Number(item.quantity) || 1,
+            unit_price: Number(item.unit_price) || 0,
+          }))
+        : [
+            {
+              description: "",
+              quantity: 1,
+              unit_price: 0,
+            },
+          ],
+    })
   }
 
   const calculateItemTotal = (item: any) => {
     const quantity = Number(item.quantity) || 0
-    const unitPrice = Number(item.unitPrice) || 0
+    const unitPrice = Number(item.unit_price) || 0
     return quantity * unitPrice
   }
 
@@ -199,575 +180,659 @@ export function InvoiceForm({ onSubmit, isSubmitting, initialData, isEditing = f
       return sum + calculateItemTotal(item)
     }, 0)
 
-    // GST calculation based on place of supply
-    const gstRate = 0.18 // 18% GST
-    let cgst = 0
-    let sgst = 0
-    let igst = 0
+    // *** IMPORTANT CHANGE: Use the input values directly as the GST amounts (no division by 100) ***
+    const sgstAmount = watchedSgst 
+    const cgstAmount = watchedCgst
+    const igstAmount = watchedIgst
 
-    // Check if place of supply is same state (Karnataka - code 29) for CGST+SGST vs IGST
-    if (watchedPlaceOfSupply === "27") {
-      // Same state - CGST + SGST
-      cgst = itemsSubtotal * 0.09 // 9% CGST
-      sgst = itemsSubtotal * 0.09 // 9% SGST
-    } else if (watchedPlaceOfSupply) {
-      // Different state - IGST
-      igst = itemsSubtotal * 0.18 // 18% IGST
-    }
-
-    const totalGst = cgst + sgst + igst
-
-    let discountAmount = 0
-    if (watchedDiscountType === "PERCENTAGE") {
-      discountAmount = (itemsSubtotal * Number(watchedDiscountValue)) / 100
-    } else {
-      discountAmount = Number(watchedDiscountValue)
-    }
-
-    const shippingAmount = Number(watchedShippingAmount) || 0
-    const adjustmentAmount = Number(watchedAdjustmentAmount) || 0
-
-    const total = itemsSubtotal + totalGst - discountAmount + shippingAmount + adjustmentAmount
+    const totalGst = sgstAmount + cgstAmount + igstAmount
+    const total = itemsSubtotal + totalGst
 
     return {
       subtotal: itemsSubtotal,
-      cgst,
-      sgst,
-      igst,
+      // The returned values here are the direct user inputs
+      sgst: sgstAmount,
+      cgst: cgstAmount,
+      igst: igstAmount,
       totalGst,
-      discountAmount,
-      shippingAmount,
-      adjustmentAmount,
       total: Math.max(0, total),
     }
   }
 
   const totals = calculateTotals()
 
-  const handleSubmit = (data: InvoiceFormData) => {
-    const formattedData = {
-      ...data,
-      invoiceDate: data.invoiceDate.toISOString(),
-      dueDate: data.dueDate.toISOString(),
-      items: data.items.map((item) => ({
-        ...item,
-        amount: calculateItemTotal(item),
-        tax: 0, // Tax is calculated at invoice level
-      })),
-      subtotal: totals.subtotal,
-      cgst: totals.cgst,
-      sgst: totals.sgst,
-      igst: totals.igst,
-      tax: totals.totalGst,
-      totalAmount: totals.total,
-      discountAmount: totals.discountAmount,
-      shippingAmount: totals.shippingAmount,
-      adjustmentAmount: totals.adjustmentAmount,
+  const onSubmit = async (data: InvoiceFormData) => {
+    console.log("Form submitted with data:", data)
+    
+    try {
+      // Helper function to round to 2 decimal places
+      const roundToTwoDecimals = (num: number): number => {
+        return Math.round((num + Number.EPSILON) * 100) / 100;
+      };
+
+      const formattedData = {
+        ...data,
+        invoice_date: data.invoice_date.toISOString().split('T')[0],
+        due_date: data.due_date.toISOString().split('T')[0],
+        items: data.items.map((item) => ({
+          description: item.description,
+          quantity: (item.quantity),
+          unit_price: (item.unit_price),
+          amount: (calculateItemTotal(item)),
+        })),
+        subtotal: (totals.subtotal),
+        // Use the totals which now reflect the direct amount entered by the user
+        sgst: (totals.sgst), 
+        cgst: (totals.cgst),
+        igst: (totals.igst),
+        total_amount: (totals.total),
+        
+        // Remove sgst_percentage, cgst_percentage, igst_percentage fields 
+        // to prevent confusion since the user is now entering amounts, not percentages.
+        // If the API requires them, they should be set to 0 or derived elsewhere.
+      }
+
+      // Deleting the percentage keys from the final data object, as they now hold the amount
+      // and sending them with a 'percentage' suffix is misleading/incorrect.
+      delete (formattedData as any).sgst_percentage;
+      delete (formattedData as any).cgst_percentage;
+      delete (formattedData as any).igst_percentage;
+
+      console.log("Sending data to API:", formattedData)
+
+      let result
+      if (isEditing && invoiceId) {
+        result = await updateInvoice({
+          id: invoiceId,
+          ...formattedData
+        }).unwrap()
+        
+        toast({
+          title: "Success!",
+          description: "Invoice updated successfully",
+        })
+      } else {
+        result = await addInvoice(formattedData).unwrap()
+        
+        toast({
+          title: "Success!",
+          description: "Invoice created successfully",
+        })
+      }
+      router.push("/sales/invoice")
+      router.refresh()
+      console.log("API response:", result)
+      
+      if (onSuccess) {
+        onSuccess()
+      }
+
+    } catch (error: any) {
+      console.error("Failed to submit invoice:", error)
+      
+      toast({
+        title: "Error",
+        description: error?.data?.message || error?.data?.detail || `Failed to ${isEditing ? 'update' : 'create'} invoice`,
+        variant: "destructive",
+      })
     }
-
-    onSubmit(formattedData)
   }
 
-  if (isLoadingData) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  // Debug: Log form state and errors
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      console.log("Form values:", value)
+      console.log("Form errors:", form.formState.errors)
+    })
+    return () => subscription.unsubscribe()
+  }, [form.watch, form.formState.errors])
+
+  const isSubmitting = isAdding || isUpdating
+
+  // Check if form is valid
+  const isFormValid = form.formState.isValid
+  console.log("Form is valid:", isFormValid)
+  console.log("Form errors:", form.formState.errors)
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Invoice Header */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="invoiceNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Invoice Number</FormLabel>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Customer, Project, Vessel, Status fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="customer"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Customer *</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                  disabled={customersLoading}
+                >
                   <FormControl>
-                    <Input {...field} placeholder="GCS29/001/25-26" readOnly />
+                    <SelectTrigger className={form.formState.errors.customer ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    {customersLoading ? (
+                      <SelectItem value="loading" disabled>Loading customers...</SelectItem>
+                    ) : (
+                      customersData.map((customer: any) => (
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                          {customer?.company_name} - {customer?.contacts[0]?.first_name} {customer?.contacts[0]?.last_name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="invoiceDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Invoice Date</FormLabel>
+          <FormField
+            control={form.control}
+            name="project"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project *</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                  disabled={projectsLoading}
+                >
                   <FormControl>
-                    <DatePicker date={field.value} onDateChange={field.onChange} />
+                    <SelectTrigger className={form.formState.errors.project ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Due Date</FormLabel>
-                  <FormControl>
-                    <DatePicker date={field.value} onDateChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="customerId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.companyName || `${customer.firstName} ${customer.lastName}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="contactPerson"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Person</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select contact person" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {selectedCustomer?.contacts?.map((contact: any) => (
-                        <SelectItem key={contact.id} value={`${contact.firstName} ${contact.lastName}`}>
-                          {contact.firstName} {contact.lastName} - {contact.designation}
-                        </SelectItem>
-                      )) || []}
-                      {/* Fallback option if no contacts */}
-                      {(!selectedCustomer?.contacts || selectedCustomer.contacts.length === 0) && (
-                        <SelectItem value="No contacts available" disabled>
-                          No contacts available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="placeOfSupply"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Place of Supply</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {INDIAN_STATES.map((state) => (
-                        <SelectItem key={state.code} value={state.code}>
-                          {state.code} - {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="projectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project (Optional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">No Project</SelectItem>
-                      {projects.map((project) => (
+                  <SelectContent>
+                    {projectsLoading ? (
+                      <SelectItem value="loading" disabled>Loading projects...</SelectItem>
+                    ) : (
+                      projectsData.map((project: any) => (
                         <SelectItem key={project.id} value={project.id.toString()}>
                           {project.name}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="vesselName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Vessel Name (Optional)</FormLabel>
+          <FormField
+            control={form.control}
+            name="vessel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Vessel *</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                  disabled={vesselsLoading}
+                >
                   <FormControl>
-                    <Input {...field} placeholder="Enter vessel name" />
+                    <SelectTrigger className={form.formState.errors.vessel ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select vessel" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    {vesselsLoading ? (
+                      <SelectItem value="loading" disabled>Loading vessels...</SelectItem>
+                    ) : (
+                      vesselsData.map((vessel: any) => (
+                        <SelectItem key={vessel.id} value={vessel.id.toString()}>
+                          {vessel.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="poNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PO Number</FormLabel>
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <Input {...field} placeholder="Purchase order number" />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+                  <SelectContent>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Sent">Sent</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        {/* Invoice Items */}
+        {/* Date fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="invoice_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Invoice Date *</FormLabel>
+                <FormControl>
+                  <DatePicker
+                    date={field.value}
+                    setDate={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="due_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Due Date *</FormLabel>
+                <FormControl>
+                  <DatePicker
+                    date={field.value}
+                    setDate={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Place of Supply */}
+        <FormField
+          control={form.control}
+          name="place_of_supply"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Place of Supply *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className={form.formState.errors.place_of_supply ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select place of supply" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {INDIAN_STATES.map((state) => (
+                    <SelectItem key={state.code} value={state.code}>
+                      {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* GST fields (now as absolute amounts) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="sgst"
+            render={({ field }) => (
+              <FormItem>
+                {/* Updated Label to indicate Amount (₹) instead of Percentage (%) */}
+                <FormLabel>SGST (Amount ₹)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="0.1" // Changed step for monetary amount
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cgst"
+            render={({ field }) => (
+              <FormItem>
+                {/* Updated Label to indicate Amount (₹) instead of Percentage (%) */}
+                <FormLabel>CGST (Amount ₹)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="0.1" // Changed step for monetary amount
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="igst"
+            render={({ field }) => (
+              <FormItem>
+                {/* Updated Label to indicate Amount (₹) instead of Percentage (%) */}
+                <FormLabel>IGST (Amount ₹)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="0.1" // Changed step for monetary amount
+                    {...field} 
+                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Optional fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="po_no"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>PO Number</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="our_ref"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Our Reference</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Items section */}
         <Card>
-          <CardHeader>
-            <CardTitle>Invoice Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border rounded-lg">
-                  <div className="md:col-span-2">
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Item description" className="min-h-[80px]" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.quantity`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantity</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.unitPrice`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unit Price</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex items-end">
-                    <div className="w-full">
-                      <FormLabel>Total</FormLabel>
-                      <div className="h-10 px-3 py-2 border rounded-md bg-muted">
-                        ₹{calculateItemTotal(watchedItems[index]).toFixed(2)}
-                      </div>
-                    </div>
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="ml-2"
-                        onClick={() => remove(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  append({
-                    description: "",
-                    quantity: 1,
-                    unitPrice: 0,
-                    hsn: "",
-                    sacCode: "",
-                  })
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Totals and Additional Charges */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Totals & Additional Charges</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="discountType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                            <SelectItem value="FIXED">Fixed Amount</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="discountValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount {watchedDiscountType === "PERCENTAGE" ? "(%)" : "(₹)"}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
+  <CardHeader>
+    <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <span>Invoice Items *</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => append({ description: "", quantity: 1, unit_price: 0 })}
+        className="w-full sm:w-auto"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Add Item
+      </Button>
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {fields.map((field, index) => (
+        <div key={field.id} className="border rounded-lg p-4 space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-4 md:items-start">
+          {/* Mobile View - Stacked Layout */}
+          <div className="md:hidden space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
                 <FormField
                   control={form.control}
-                  name="shippingAmount"
+                  name={`items.${index}.description`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Shipping Amount (₹)</FormLabel>
+                      <FormLabel>Description *</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        <Input 
+                          {...field} 
+                          className={form.formState.errors.items?.[index]?.description ? "border-red-500" : ""}
+                          placeholder="Item description"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => remove(index)}
+                disabled={fields.length === 1}
+                className="ml-2 mt-8"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name={`items.${index}.quantity`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantity *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        step="1"
+                        {...field} 
+                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        className={form.formState.errors.items?.[index]?.quantity ? "border-red-500" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`items.${index}.unit_price`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit Price *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="1"
+                        min="0"
+                        {...field} 
+                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        className={form.formState.errors.items?.[index]?.unit_price ? "border-red-500" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="text-sm font-medium text-muted-foreground">Total:</span>
+              <span className="text-sm font-medium">
+                ₹{calculateItemTotal(watchedItems[index]).toFixed(2)}
+              </span>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="adjustmentLabel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adjustment Label</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Rounding off" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="adjustmentAmount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adjustment Amount (₹)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+          {/* Desktop View - Grid Layout */}
+          <div className="hidden md:grid md:col-span-5">
+            <FormField
+              control={form.control}
+              name={`items.${index}.description`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      className={form.formState.errors.items?.[index]?.description ? "border-red-500" : ""}
+                      placeholder="Item description"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="hidden md:grid md:col-span-2">
+            <FormField
+              control={form.control}
+              name={`items.${index}.quantity`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      step="1"
+                      {...field} 
+                      onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                      className={form.formState.errors.items?.[index]?.quantity ? "border-red-500" : ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="hidden md:grid md:col-span-2">
+            <FormField
+              control={form.control}
+              name={`items.${index}.unit_price`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit Price *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="1"
+                      min="0"
+                      {...field} 
+                      onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                      className={form.formState.errors.items?.[index]?.unit_price ? "border-red-500" : ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="hidden md:grid md:col-span-2">
+            <FormItem>
+              <FormLabel>Amount</FormLabel>
+              <div className="flex items-center h-10">
+                <div className="text-sm font-medium w-full">
+                  ₹{calculateItemTotal(watchedItems[index]).toFixed(2)}
                 </div>
               </div>
+            </FormItem>
+          </div>
+          <div className="hidden md:grid md:col-span-1">
+            <FormItem>
+              <FormLabel className="invisible">Actions</FormLabel>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => remove(index)}
+                disabled={fields.length === 1}
+                className="w-full"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </FormItem>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {form.formState.errors.items && !Array.isArray(form.formState.errors.items) && (
+      <p className="text-sm font-medium text-destructive mt-2">
+        {form.formState.errors.items.message}
+      </p>
+    )}
+  </CardContent>
+</Card>
 
-              <div className="space-y-2 p-4 bg-muted rounded-lg">
+        {/* Totals section */}
+        {/* <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-2 text-right">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>₹{totals.subtotal.toFixed(2)}</span>
+              </div>
+              {totals.sgst > 0 && (
                 <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>₹{totals.subtotal.toFixed(2)}</span>
+                  <span>SGST (Inputted):</span>
+                  <span>₹{totals?.sgst.toFixed(2)}</span>
                 </div>
-                {totals.cgst > 0 && (
-                  <div className="flex justify-between">
-                    <span>CGST (9%):</span>
-                    <span>₹{totals.cgst.toFixed(2)}</span>
-                  </div>
-                )}
-                {totals.sgst > 0 && (
-                  <div className="flex justify-between">
-                    <span>SGST (9%):</span>
-                    <span>₹{totals.sgst.toFixed(2)}</span>
-                  </div>
-                )}
-                {totals.igst > 0 && (
-                  <div className="flex justify-between">
-                    <span>IGST (18%):</span>
-                    <span>₹{totals.igst.toFixed(2)}</span>
-                  </div>
-                )}
-                {totals.discountAmount > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Discount:</span>
-                    <span>-₹{totals.discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {totals.shippingAmount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Shipping:</span>
-                    <span>₹{totals.shippingAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {totals.adjustmentAmount !== 0 && (
-                  <div className="flex justify-between">
-                    <span>Adjustment:</span>
-                    <span>₹{totals.adjustmentAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg border-t pt-2">
-                  <span>Total:</span>
-                  <span>₹{totals.total.toFixed(2)}</span>
+              )}
+              {totals.cgst > 0 && (
+                <div className="flex justify-between">
+                  <span>CGST (Inputted):</span>
+                  <span>₹{totals?.cgst.toFixed(2)}</span>
                 </div>
+              )}
+              {totals.igst > 0 && (
+                <div className="flex justify-between">
+                  <span>IGST (Inputted):</span>
+                  <span>₹{totals?.igst.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg border-t pt-2">
+                <span>Total:</span>
+                <span>₹{totals.total.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        {/* Notes and Terms */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Internal notes..." className="min-h-[100px]" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <Button 
+          type="submit" 
+          className="w-full"
+          size="lg"
+        >
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isEditing ? 'Update Invoice' : 'Create Invoice'}
+        </Button>
 
-            <FormField
-              control={form.control}
-              name="termsAndConditions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Terms & Conditions</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Terms and conditions..." className="min-h-[100px]" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Update Invoice" : "Create Invoice"}
-          </Button>
-        </div>
       </form>
     </Form>
   )

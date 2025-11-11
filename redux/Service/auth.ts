@@ -6,6 +6,8 @@ interface User {
   id: string;
   name: string;
   email: string;
+  token: string;
+  access: string;
 }
 
 interface LoginData {

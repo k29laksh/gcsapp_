@@ -19,6 +19,8 @@ import { quotationApi } from './Service/quotation';
 import { creditNoteApi } from './Service/credit-notes';
 import { taskApi } from './Service/tasks';
 import { requirementsApi } from './Service/requirements';
+import { paymentApi } from './Service/payment';
+import { deliveryChallanApi } from './Service/delivery-challan';
 
 
 export const store = configureStore({
@@ -39,6 +41,8 @@ export const store = configureStore({
     [creditNoteApi.reducerPath]: creditNoteApi.reducer,
     [taskApi.reducerPath]: taskApi.reducer,
     [requirementsApi.reducerPath]: requirementsApi.reducer,
+    [paymentApi.reducerPath]: paymentApi.reducer,
+    [deliveryChallanApi.reducerPath]: deliveryChallanApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -56,7 +60,9 @@ export const store = configureStore({
       taskApi.middleware,
       invoiceApi.middleware,
       creditNoteApi.middleware,
-      requirementsApi.middleware
+      requirementsApi.middleware,
+      paymentApi.middleware,
+      deliveryChallanApi.middleware
     ),
 });
 

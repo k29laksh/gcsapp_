@@ -1,354 +1,244 @@
-"use client"
+// app/sales/inquiries/page.tsx
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Eye, Edit, Trash2, Plus, FileText, Clock, CheckCircle, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/hooks/use-toast"
-import { DataTableEnhanced } from "@/components/ui/data-table-enhanced"
-import { PageHeader } from "@/components/ui/page-header"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { useGetInquiriesQuery, useDeleteInquiryMutation } from "@/redux/Service/inquiry"
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { DataTable } from "@/components/ui/data-table";
+import { useToast } from "@/hooks/use-toast";
+import { useGetInquiriesQuery, useDeleteInquiryMutation } from "@/redux/Service/inquiry";
+import { Eye, Edit, Trash2, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Inquiry {
-  id: string
-  date: string
-  subject: string
-  requirements: string
-  source: string
-  status: string
-  budget: number
-  timeline: string
-  follow_up_date: string
-  notes: string
-  assigned_to: string
+  id: string;
+  date: string;
+  subject: string;
+  requirements: string;
+  source: string;
+  status: string;
+  budget: number;
+  timeline: string;
+  follow_up_date: string;
+  notes: string;
+  assigned_to: string;
 }
 
-interface InquiryStats {
-  totalInquiries: number
-  pendingInquiries: number
-  inProgressInquiries: number
-  completedInquiries: number
-  cancelledInquiries: number
-}
+export default function InquiryListPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { data: inquiries = [], isLoading, error } = useGetInquiriesQuery();
+  const [deleteInquiry] = useDeleteInquiryMutation();
 
-export default function InquiryPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  
-  // RTK Query hooks
-  const { data: inquiries = [], isLoading, error } = useGetInquiriesQuery()
-  const [deleteInquiry] = useDeleteInquiryMutation()
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      "Pending": "bg-yellow-100 text-yellow-800",
+      "In Progress": "bg-blue-100 text-blue-800",
+      "Completed": "bg-green-100 text-green-800",
+      "Cancelled": "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
 
-  const [stats, setStats] = useState<InquiryStats>({
-    totalInquiries: 0,
-    pendingInquiries: 0,
-    inProgressInquiries: 0,
-    completedInquiries: 0,
-    cancelledInquiries: 0,
-  })
-
-  // Calculate stats from inquiries data
-  useEffect(() => {
-    if (inquiries && inquiries.length > 0) {
-      const totalInquiries = inquiries.length
-      const pendingInquiries = inquiries.filter(inquiry => inquiry.status === "Pending").length
-      const inProgressInquiries = inquiries.filter(inquiry => inquiry.status === "In Progress").length
-      const completedInquiries = inquiries.filter(inquiry => inquiry.status === "Completed").length
-      const cancelledInquiries = inquiries.filter(inquiry => inquiry.status === "Cancelled").length
-
-      setStats({
-        totalInquiries,
-        pendingInquiries,
-        inProgressInquiries,
-        completedInquiries,
-        cancelledInquiries,
-      })
-    } else {
-      setStats({
-        totalInquiries: 0,
-        pendingInquiries: 0,
-        inProgressInquiries: 0,
-        completedInquiries: 0,
-        cancelledInquiries: 0,
-      })
-    }
-  }, [inquiries])
-
-  // Handle errors from RTK Query
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching inquiries:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load inquiries",
-        variant: "destructive",
-      })
-    }
-  }, [error, toast])
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteInquiry(id).unwrap()
-      
-      toast({
-        title: "Success",
-        description: "Inquiry deleted successfully",
-      })
-    } catch (error) {
-      console.error("Error deleting inquiry:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete inquiry",
-        variant: "destructive",
-      })
-    }
-  }
+  const getSourceColor = (source: string) => {
+    const colors: Record<string, string> = {
+      "Email": "bg-blue-100 text-blue-800 border-blue-200",
+      "Phone": "bg-green-100 text-green-800 border-green-200",
+      "Website": "bg-purple-100 text-purple-800 border-purple-200",
+      "Referral": "bg-orange-100 text-orange-800 border-orange-200",
+    };
+    return colors[source] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
+    if (!amount) return "Not specified";
+    return `₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  };
 
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      "Pending": "bg-yellow-100 text-yellow-800",
-      "In Progress": "bg-blue-100 text-blue-800",
-      "Completed": "bg-green-100 text-green-800",
-      "Cancelled": "bg-red-100 text-red-800",
-    }
-    return (
-      <Badge className={statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}>
-        {status}
-      </Badge>
-    )
-  }
-
-  const getSourceBadge = (source: string) => {
-    const sourceColors = {
-      "Email": "bg-blue-100 text-blue-800",
-      "Phone": "bg-green-100 text-green-800",
-      "Website": "bg-purple-100 text-purple-800",
-      "Referral": "bg-orange-100 text-orange-800",
-    }
-    return (
-      <Badge variant="outline" className={sourceColors[source as keyof typeof sourceColors] || "bg-gray-100 text-gray-800"}>
-        {source}
-      </Badge>
-    )
-  }
-
-  const columns: ColumnDef<Inquiry>[] = [
+  const columns = [
     {
-      accessorKey: "id",
-      header: "ID",
-      cell: ({ row }) => <div className="font-mono text-xs">{row.getValue("id").slice(0, 8)}...</div>,
-    },
-    {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => formatDate(row.getValue("date")),
-    },
-    {
-      accessorKey: "subject",
-      header: "Subject",
-      cell: ({ row }) => <div className="max-w-[200px] truncate font-medium">{row.getValue("subject")}</div>,
-    },
-    {
-      accessorKey: "requirements",
-      header: "Requirements",
-      cell: ({ row }) => (
-        <div className="max-w-[250px] truncate text-sm text-muted-foreground">
-          {row.getValue("requirements")}
-        </div>
+      key: "subject",
+      label: "Subject",
+      sortable: true,
+      render: (value: string) => (
+        <div className="line-clamp-2">{value}</div>
       ),
     },
     {
-      accessorKey: "source",
-      header: "Source",
-      cell: ({ row }) => getSourceBadge(row.getValue("source")),
+      key: "id",
+      label: "ID",
+      render: (value: string) => (
+        <span className="font-mono text-muted-foreground">
+          {value.slice(0, 8)}...
+        </span>
+      ),
     },
     {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => getStatusBadge(row.getValue("status")),
+      key: "requirements",
+      label: "Requirements",
+      render: (value: string) => (
+        <div className="line-clamp-2 text-muted-foreground">{value}</div>
+      ),
     },
     {
-      accessorKey: "budget",
-      header: "Budget",
-      cell: ({ row }) => {
-        const budget = row.getValue("budget") as number
-        return budget ? formatCurrency(budget) : "Not specified"
-      },
+      key: "source",
+      label: "Source",
+      render: (value: string) => (
+        <span className={`text-xs font-medium px-3 py-1 rounded-full border ${getSourceColor(value)}`}>
+          {value}
+        </span>
+      ),
     },
     {
-      accessorKey: "timeline",
-      header: "Timeline",
-      cell: ({ row }) => row.getValue("timeline") || "Not specified",
+      key: "budget",
+      label: "Budget",
+      sortable: true,
+      render: (value: number) => formatCurrency(value),
+      className: "text-right",
     },
     {
-      id: "actions",
-      cell: ({ row }) => {
-        const inquiry = row.original
+      key: "timeline",
+      label: "Timeline",
+      render: (value: string) => value || "Not specified",
+    },
+    {
+      key: "date",
+      label: "Date",
+      sortable: true,
+      render: (value: string) => formatDate(value),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value: string) => (
+        <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(value)}`}>
+          {value}
+        </span>
+      ),
+    },
+  ];
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => router.push(`/sales/inquiry/${inquiry.id}`)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/sales/inquiry/${inquiry.id}/edit`)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              {inquiry.status === "In Progress" && (
-                <DropdownMenuItem onClick={() => router.push(`/sales/quotation/new?inquiryId=${inquiry.id}`)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Quotation
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the inquiry.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(inquiry.id)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
+  const filters = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select" as const,
+      options: [
+        { value: "Pending", label: "Pending" },
+        { value: "In Progress", label: "In Progress" },
+        { value: "Completed", label: "Completed" },
+        { value: "Cancelled", label: "Cancelled" },
+      ],
     },
-  ]
+    {
+      key: "source",
+      label: "Source",
+      type: "select" as const,
+      options: [
+        { value: "Email", label: "Email" },
+        { value: "Phone", label: "Phone" },
+        { value: "Website", label: "Website" },
+        { value: "Referral", label: "Referral" },
+      ],
+    },
+  ];
 
-  const breadcrumbs = [{ label: "Sales", href: "/sales" }, { label: "Inquiries" }]
+  const handleCreateQuotation = async (inquiry: Inquiry, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/sales/quotation/new?inquiryId=${inquiry.id}`);
+  };
+
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (inquiry: Inquiry) => `/sales/inquiry/${inquiry.id}`,
+    },
+    {
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (inquiry: Inquiry) => `/sales/inquiry/${inquiry.id}/edit`,
+    },
+    {
+      type: "custom" as const,
+      label: "Create Quotation",
+      icon: <FileText className="h-4 w-4 mr-2" />,
+      onClick: handleCreateQuotation,
+      condition: (inquiry: Inquiry) => inquiry.status === "In Progress",
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+    },
+  ];
+
+  const handleDelete = async (id: string) => {
+    await deleteInquiry(id).unwrap();
+  };
+
+  const renderMobileCard = (inquiry: Inquiry) => (
+    <div key={inquiry.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p className="font-semibold text-sm line-clamp-1">{inquiry.subject}</p>
+          <p className="text-xs text-muted-foreground font-mono">
+            {inquiry.id.slice(0, 8)}...
+          </p>
+        </div>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(inquiry.status)}`}>
+          {inquiry.status}
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Source:</span>
+          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getSourceColor(inquiry.source)}`}>
+            {inquiry.source}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Budget:</span>
+          <span className="font-medium">{formatCurrency(inquiry.budget)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Timeline:</span>
+          <span className="font-medium">{inquiry.timeline || "Not specified"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Date:</span>
+          <span className="font-medium">{formatDate(inquiry.date)}</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Sales Inquiries"
-        description="Manage customer inquiries and track conversion"
-        breadcrumbs={breadcrumbs}
-        action={
-          <Button onClick={() => router.push("/sales/inquiry/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Inquiry
-          </Button>
-        }
-      />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Inquiries</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInquiries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingInquiries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.inProgressInquiries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.completedInquiries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-            <FileText className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.cancelledInquiries}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <DataTableEnhanced
-        columns={columns}
-        data={inquiries}
-        searchKey="subject"
-        searchPlaceholder="Search inquiries by subject..."
-        onAdd={() => router.push("/sales/inquiry/new")}
-        addLabel="New Inquiry"
-        loading={isLoading}
-      />
-    </div>
-  )
+    <DataTable
+      data={inquiries}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      title="Sales Inquiries"
+      description="Manage and track customer inquiries"
+      createButton={{
+        label: "New Inquiry",
+        href: "/sales/inquiry/new",
+      }}
+      isLoading={isLoading}
+      error={error}
+      onDelete={handleDelete}
+      renderMobileCard={renderMobileCard}
+    />
+  );
 }

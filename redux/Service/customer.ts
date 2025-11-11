@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const customerApi = createApi({
   reducerPath: 'customerApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://127.0.0.1:8000/customer',
+    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/customer`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {
@@ -32,10 +32,10 @@ export const customerApi = createApi({
     }),
 
     // Get single customer
-    getSingleCustomer: builder.query({
-      query: (id: string) => `/${id}/`,
-      providesTags: (result, error, id) => [{ type: 'Customer', id }],
-    }),
+   getSingleCustomer: builder.query({
+  query: (id: string) => `/${id}/`,
+  providesTags: (result, error, id) => [{ type: 'Customer', id }],
+}),
 
     // Create customer
     addCustomer: builder.mutation({
@@ -51,6 +51,30 @@ export const customerApi = createApi({
     updateCustomer: builder.mutation({
       query: ({ id, ...data }) => ({
         url: `/${id}/`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Customer', id: 'LIST' },
+        { type: 'Customer', id },
+      ],
+    }),
+  editAddress: builder.mutation({
+  query: ({ id, ...data }) => ({
+    url: `/address/${id}/`,
+    method: 'PUT',
+    body: data,
+  }),
+  // 👇 This ensures the specific customer's data gets refreshed
+  invalidatesTags: (result, error, { customer }) => [
+    { type: 'Customer', id: customer },
+    { type: 'Customer', id: 'LIST' },
+  ],
+}),
+
+    editContact: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/contact/${id}/`,
         method: 'PUT',
         body: data,
       }),
@@ -78,4 +102,6 @@ export const {
   useAddCustomerMutation,
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
+  useEditAddressMutation,
+  useEditContactMutation,
 } = customerApi;

@@ -1,300 +1,195 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Eye, Edit, Trash2, Plus, FileText, DollarSign } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useToast } from "@/components/ui/use-toast"
-import { DataTableEnhanced } from "@/components/ui/data-table-enhanced"
-import { PageHeader } from "@/components/ui/page-header"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  useGetCreditNotesQuery,
-  useGetCreditNoteStatsQuery,
-  useDeleteCreditNoteMutation,
-} from "@/redux/Service/credit-notes"
+import { DataTable } from "@/components/ui/data-table"
+import { formatDate } from "@/lib/dummy-data"
+import { Eye, Edit, Trash2 } from "lucide-react"
+import { useGetCreditNotesQuery, useDeleteCreditNoteMutation } from "@/redux/Service/credit-notes"
+import { useToast } from "@/hooks/use-toast"
 
-interface Customer {
-  id: string
-  firstName: string
-  lastName: string
-  companyName: string | null
-}
-
-interface CreditNoteWithCustomer {
-  id: string
-  note_number: number
-  date: string
-  reference: string
-  reason: string
-  notes: string
-  customer: string
-  customer_details?: Customer
-}
-
-export default function CreditNotesPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  
-  // RTK Query hooks
-  const { 
-    data: creditNotesData, 
-    isLoading: notesLoading, 
-    error: notesError,
-    refetch: refetchCreditNotes 
-  } = useGetCreditNotesQuery()
-  
-  const { 
-    data: statsData, 
-    isLoading: statsLoading 
-  } = useGetCreditNoteStatsQuery()
-  
+export default function CreditNoteListPage() {
+  const { data: creditNotes = [], isLoading } = useGetCreditNotesQuery({})
   const [deleteCreditNote] = useDeleteCreditNoteMutation()
-
-  // Transform API data to include customer details (you'll need to fetch customers separately)
-  const [creditNotes, setCreditNotes] = useState<CreditNoteWithCustomer[]>([])
-
-  useEffect(() => {
-    if (creditNotesData) {
-      // If your API doesn't return customer details, you'll need to fetch them separately
-      // This is a placeholder - you'll need to implement customer data fetching
-      const notesWithCustomers = creditNotesData.map((note: any) => ({
-        ...note,
-        customer_details: {
-          id: note.customer,
-          firstName: "Loading...", // You'll need to fetch this from customers API
-          lastName: "",
-          companyName: null
-        }
-      }))
-      setCreditNotes(notesWithCustomers)
-    }
-  }, [creditNotesData])
-
-  useEffect(() => {
-    if (notesError) {
-      toast({
-        title: "Error",
-        description: "Failed to load credit notes",
-        variant: "destructive",
-      })
-    }
-  }, [notesError, toast])
+  const { toast } = useToast()
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteCreditNote(id).unwrap()
-      
-      toast({
-        title: "Success",
-        description: "Credit note deleted successfully",
-      })
-
-      refetchCreditNotes()
-    } catch (error) {
-      console.error("Error deleting credit note:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete credit note",
-        variant: "destructive",
-      })
+    if (confirm("Are you sure you want to delete this credit note?")) {
+      try {
+        await deleteCreditNote(id).unwrap()
+        toast({
+          title: "Success",
+          description: "Credit note deleted successfully",
+        })
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to delete credit note",
+          variant: "destructive",
+        })
+      }
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(amount)
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      issued: "bg-green-100 text-green-800",
+      draft: "bg-yellow-100 text-yellow-800",
+      cancelled: "bg-red-100 text-red-800",
+    }
+    return colors[status.toLowerCase()] || "bg-gray-100 text-gray-800"
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
-
-  const getCustomerName = (creditNote: CreditNoteWithCustomer) => {
-    
-    return creditNote.customer
-  }
-
-  const columns: ColumnDef<CreditNoteWithCustomer>[] = [
+  const columns = [
     {
-      accessorKey: "note_number",
-      header: "Credit Note #",
-      cell: ({ row }) => <div className="font-medium">CN-{row.getValue("note_number")}</div>,
+      key: "note_no",
+      label: "Credit Note No.",
+      sortable: true,
+      mobilePriority: true,
     },
     {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => formatDate(row.getValue("date")),
+      key: "customer",
+      label: "Customer",
+      sortable: true,
+      render: (value: any) => value?.company_name || value?.customer_type || "N/A",
     },
     {
-      accessorKey: "customer",
-      header: "Customer",
-      cell: ({ row }) => {
-        const creditNote = row.original
-        return getCustomerName(creditNote)
+      key: "contact_person",
+      label: "Contact Person",
+      sortable: true,
+    },
+    {
+      key: "invoice",
+      label: "Invoice Ref.",
+      sortable: true,
+      render: (value: any) => value?.invoice_no || "N/A",
+    },
+    {
+      key: "items",
+      label: "Amount",
+      sortable: false,
+      render: (items: any[]) => {
+        const total = items?.reduce((sum, item) => {
+          return sum + (Number.parseFloat(item.rate) * item.quantity)
+        }, 0) || 0
+        return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
       },
+      className: "text-right",
     },
     {
-      accessorKey: "reference",
-      header: "Reference",
-      cell: ({ row }) => <div>{row.getValue("reference") || "N/A"}</div>,
+      key: "date",
+      label: "Date",
+      sortable: true,
+      render: (value: string) => formatDate(value),
     },
     {
-      accessorKey: "reason",
-      header: "Reason",
-      cell: ({ row }) => <div className="max-w-[200px] truncate">{row.getValue("reason")}</div>,
+      key: "status",
+      label: "Status",
+      sortable: true,
+      render: (value: string) => (
+        <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(value)}`}>
+          {value.charAt(0).toUpperCase() + value.slice(1)}
+        </span>
+      ),
     },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const creditNote = row.original
+  ]
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => router.push(`/sales/creditnote/${creditNote.id}`)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/sales/creditnote/${creditNote.id}/edit`)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the credit note.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(creditNote.id)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (item: any) => `/sales/creditnote/${item.id}`,
+    },
+    {
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (item: any) => `/sales/creditnote/${item.id}/edit`,
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+      onClick: (item: any, e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        handleDelete(item.id)
       },
     },
   ]
 
-  const breadcrumbs = [{ label: "Sales", href: "/sales" }, { label: "Credit Notes" }]
+  const filters = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select" as const,
+      options: [
+        { value: "issued", label: "Issued" },
+        { value: "draft", label: "Draft" },
+        { value: "cancelled", label: "Cancelled" },
+      ],
+    },
+  ]
 
-  // Stats data from RTK Query
-  const stats = statsData || {
-    totalCreditNotes: 0,
-    thisMonthCreditNotes: 0,
-    totalAmount: 0,
-    thisMonthAmount: 0,
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p>Loading credit notes...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Credit Notes"
-        description="Manage credit notes and customer refunds"
-        breadcrumbs={breadcrumbs}
-        action={
-          <Button onClick={() => router.push("/sales/creditnote/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Credit Note
-          </Button>
-        }
-      />
+    <DataTable
+      data={creditNotes}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      searchable={true}
+      sortable={true}
+      createButton={{
+        label: "New Credit Note",
+        href: "/sales/creditnote/new",
+      }}
+      title="Credit Notes"
+      description="Manage and track credit notes"
+      emptyMessage="No credit notes found"
+      renderMobileCard={(item) => {
+        const total = item.items?.reduce((sum: number, lineItem: any) => {
+          return sum + (Number.parseFloat(lineItem.rate) * lineItem.quantity)
+        }, 0) || 0
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Credit Notes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCreditNotes}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.thisMonthCreditNotes}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.totalAmount)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(stats.thisMonthAmount)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <DataTableEnhanced
-        columns={columns}
-        data={creditNotes}
-        searchKey="note_number"
-        searchPlaceholder="Search credit notes..."
-        onAdd={() => router.push("/sales/creditnote/new")}
-        addLabel="Add Credit Note"
-        loading={notesLoading}
-      />
-    </div>
+        return (
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <p className="font-semibold text-sm">{item.note_no}</p>
+                <p className="text-xs text-gray-600">
+                  {item.customer?.company_name || item.customer?.customer_type || "N/A"}
+                </p>
+              </div>
+              <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(item.status)}`}>
+                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+              </span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Contact:</span>
+                <span className="font-medium">{item.contact_person}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Amount:</span>
+                <span className="font-medium">
+                  ₹{total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date:</span>
+                <span className="font-medium">{formatDate(item.date)}</span>
+              </div>
+            </div>
+          </div>
+        )
+      }}
+    />
   )
 }

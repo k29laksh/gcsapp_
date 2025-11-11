@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast"
 import { 
   useGetSingleInvoiceQuery, 
   useUpdateInvoiceMutation,
-  useGetCustomersQuery,
-  useGetProjectsQuery,
-  useGetVesselsQuery
 } from "@/redux/Service/invoice"
+import { useGetCustomersQuery } from "@/redux/Service/customer"
+import { useGetProjectsQuery } from "@/redux/Service/projects"
+import { useGetVesselsQuery } from "@/redux/Service/vessel"
 
 export default function EditInvoicePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)

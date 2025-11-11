@@ -1,271 +1,182 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import type { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal, Eye, Edit, Trash2, Plus, FileText, Truck } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useToast } from "@/components/ui/use-toast"
-import { DataTableEnhanced } from "@/components/ui/data-table-enhanced"
-import { PageHeader } from "@/components/ui/page-header"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { DataTable } from "@/components/ui/data-table"
+import { Eye, Edit, Trash2 } from "lucide-react"
+import { useGetDeliveryChallansQuery, useDeleteDeliveryChallanMutation } from "@/redux/Service/delivery-challan"
+import { useToast } from "@/hooks/use-toast"
 
-interface DeliveryChallan {
+interface DeliveryChallanItem {
   id: string
-  challanNumber: string
-  date: string
-  customer: {
-    firstName: string
-    lastName: string
-    companyName: string | null
+  delivery_note_no: string
+  order_no: string
+  dispatch_date: string
+  delivery_method: string
+  customer?: {
+    name: string
+  }
+  invoice?: {
+    invoice_no: string
   }
 }
 
-interface DeliveryChallanStats {
-  totalChallans: number
-  thisMonthChallans: number
-  pendingChallans: number
-  deliveredChallans: number
-}
-
-export default function DeliveryChallansPage() {
-  const router = useRouter()
+export default function DeliveryChallansList() {
   const { toast } = useToast()
-  const [challans, setChallans] = useState<DeliveryChallan[]>([])
-  const [stats, setStats] = useState<DeliveryChallanStats>({
-    totalChallans: 0,
-    thisMonthChallans: 0,
-    pendingChallans: 0,
-    deliveredChallans: 0,
-  })
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchChallans()
-    fetchStats()
-  }, [])
-
-  const fetchChallans = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/sales/deliverychallan")
-      if (!response.ok) throw new Error("Failed to fetch delivery challans")
-      const data = await response.json()
-      setChallans(data)
-    } catch (error) {
-      console.error("Error fetching delivery challans:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load delivery challans",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchStats = async () => {
-    try {
-      const response = await fetch("/api/sales/deliverychallan/stats")
-      if (response.ok) {
-        const data = await response.json()
-        setStats(data)
-      }
-    } catch (error) {
-      console.error("Error fetching delivery challan stats:", error)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    try {
-      const response = await fetch(`/api/sales/deliverychallan/${id}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to delete delivery challan")
-      }
-
-      toast({
-        title: "Success",
-        description: "Delivery challan deleted successfully",
-      })
-
-      fetchChallans()
-      fetchStats()
-    } catch (error) {
-      console.error("Error deleting delivery challan:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete delivery challan",
-        variant: "destructive",
-      })
-    }
-  }
-
+  
+  // Fetch delivery challans
+  const { data: challans, isLoading } = useGetDeliveryChallansQuery({})
+  const [deleteDeliveryChallan] = useDeleteDeliveryChallanMutation()
+  
+  // Format date helper
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     })
   }
 
-  const columns: ColumnDef<DeliveryChallan>[] = [
+  const columns = [
     {
-      accessorKey: "challanNumber",
-      header: "Challan #",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("challanNumber")}</div>,
+      key: "delivery_note_no",
+      label: "Delivery Note No.",
+      sortable: true,
+      className: "min-w-[150px]",
+      mobilePriority: true,
     },
     {
-      accessorKey: "date",
-      header: "Date",
-      cell: ({ row }) => formatDate(row.getValue("date")),
+      key: "customer",
+      label: "Customer",
+      sortable: true,
+      render: (value: { company_name: string }) => value?.company_name || "N/A",
+      className: "min-w-[150px]",
     },
     {
-      accessorKey: "customer",
-      header: "Customer",
-      cell: ({ row }) => {
-        const customer = row.getValue("customer") as DeliveryChallan["customer"]
-        return customer.companyName || `${customer.firstName} ${customer.lastName}`
-      },
+      key: "invoice",
+      label: "Invoice No.",
+      sortable: true,
+      render: (value: { invoice_no: string }) => value?.invoice_no || "N/A",
+      className: "min-w-[120px]",
     },
     {
-      id: "actions",
-      cell: ({ row }) => {
-        const challan = row.original
+      key: "order_no",
+      label: "Order No.",
+      sortable: true,
+      className: "min-w-[100px]",
+    },
+    {
+      key: "dispatch_date",
+      label: "Dispatch Date",
+      sortable: true,
+      render: (value: string) => formatDate(value),
+      className: "min-w-[110px]",
+    },
+    {
+      key: "delivery_method",
+      label: "Delivery Method",
+      sortable: true,
+      className: "min-w-[130px]",
+    },
+  ]
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => router.push(`/sales/deliverychallan/${challan.id}`)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/sales/deliverychallan/${challan.id}/edit`)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the delivery challan.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(challan.id)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (item: { id: string }) => `/sales/deliverychallan/${item.id}`,
+    },
+    {
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (item: { id: string }) => `/sales/deliverychallan/${item.id}/edit`,
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+      onClick: async (item: { id: string }, e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (confirm("Are you sure you want to delete this delivery challan?")) {
+          await handleDelete(item.id)
+        }
       },
     },
   ]
 
-  const breadcrumbs = [{ label: "Sales", href: "/sales" }, { label: "Delivery Challans" }]
+  const filters = [
+    {
+      key: "delivery_method",
+      label: "Delivery Method",
+      type: "select" as const,
+      options: [
+        { value: "Air Freight", label: "Air Freight" },
+        { value: "Sea Freight", label: "Sea Freight" },
+        { value: "Road Transport", label: "Road Transport" },
+        { value: "Courier", label: "Courier" },
+      ],
+    },
+  ]
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDeliveryChallan(id).unwrap()
+      toast({
+        title: "Success",
+        description: "Delivery Challan deleted successfully",
+      })
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete delivery challan",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading delivery challans...</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Delivery Challans"
-        description="Manage delivery challans and track shipments"
-        breadcrumbs={breadcrumbs}
-        action={
-          <Button onClick={() => router.push("/sales/deliverychallan/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Delivery Challan
-          </Button>
-        }
-      />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Challans</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalChallans}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Truck className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.thisMonthChallans}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <FileText className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingChallans}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-            <Truck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.deliveredChallans}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <DataTableEnhanced
-        columns={columns}
-        data={challans}
-        searchKey="challanNumber"
-        searchPlaceholder="Search delivery challans..."
-        onAdd={() => router.push("/sales/deliverychallan/new")}
-        addLabel="Create Delivery Challan"
-        loading={loading}
-      />
-    </div>
+    <DataTable
+      data={challans || []}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      searchable={true}
+      sortable={true}
+      createButton={{
+        label: "New Delivery Challan",
+        href: "/sales/deliverychallan/new",
+      }}
+      title="Delivery Challans"
+      description="Manage and track delivery challans"
+      onDelete={handleDelete}
+      emptyMessage="No delivery challans found"
+      renderMobileCard={(item: DeliveryChallanItem) => (
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-start gap-2">
+              <div>
+                <p className="font-semibold text-gray-900">{item.delivery_note_no}</p>
+                <p className="text-xs text-gray-600">{item.customer?.name || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600 space-y-1 mb-3">
+            <p>Order: {item.order_no}</p>
+            <p>Invoice: {item.invoice?.invoice_no || "N/A"}</p>
+            <p>Dispatch: {formatDate(item.dispatch_date)}</p>
+            <p>Method: {item.delivery_method}</p>
+          </div>
+        </div>
+      )}
+    />
   )
 }

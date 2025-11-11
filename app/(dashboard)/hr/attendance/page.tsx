@@ -73,7 +73,7 @@ export default function AttendancePage() {
   } = useGetAttendanceQuery({ date: format(date, "yyyy-MM-dd") })
   
   const [deleteAttendance] = useDeleteAttendanceMutation()
-  const { data: employees = [] } = useGetEmployeeQuery()
+  const { data: employees = [] } = useGetEmployeeQuery(undefined)
 
   // Calculate stats
   const stats = useMemo(() => {

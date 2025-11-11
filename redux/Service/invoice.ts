@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const invoiceApi = createApi({
   reducerPath: 'invoiceApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://127.0.0.1:8000/invoices',
+    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/invoices`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {
@@ -64,6 +64,14 @@ export const invoiceApi = createApi({
         'Invoice'
       ],
     }),
+       getPdf: builder.query<Blob, string>({
+  query: (id) => ({
+    url: `/invoices/${id}/generate-pdf/`,
+    method: "GET",
+    // important: tell fetch to expect a binary file
+    responseHandler: async (response) => await response.blob(),
+  }),
+}),
 
     // Delete invoice
     deleteInvoice: builder.mutation({
@@ -104,6 +112,7 @@ export const {
   useAddInvoiceMutation,
   useUpdateInvoiceMutation,
   useDeleteInvoiceMutation,
+  useGetInvoicePdfQuery,
   useSendInvoiceMutation,
   useLazyDownloadInvoicePdfQuery,
 } = invoiceApi;

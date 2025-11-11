@@ -1,207 +1,198 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// components/dashboard/recent-activities.tsx
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Loader2, RefreshCw, Activity } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { 
+  User, 
+  FileText, 
+  Briefcase, 
+  Calendar,
+  DollarSign,
+  Building
+} from "lucide-react";
 
-interface ActivityLog {
-  id: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  details: string;
-  createdAt: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    profilePicture: string | null;
-  };
+interface RecentActivitiesProps {
+  customers?: any[];
+  invoices?: any[];
+  projects?: any[];
 }
 
-export function RecentActivities() {
-  const [activities, setActivities] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function RecentActivities({ customers = [], invoices = [], projects = [] }: RecentActivitiesProps) {
+  // Combine and sort recent activities
+  const recentActivities = [
+    ...customers.map(customer => ({
+      id: customer.id,
+      type: 'customer',
+      title: `New ${customer.customer_type === 'Company' ? 'Company' : 'Individual'}`,
+      description: customer.company_name || `${customer.first_name} ${customer.last_name}`,
+      date: customer.created_at,
+      status: 'success',
+      icon: customer.customer_type === 'Company' ? Building : User,
+      amount: null
+    })),
+    ...invoices.map(invoice => ({
+      id: invoice.id,
+      type: 'invoice',
+      title: `Invoice ${invoice.status === 'paid' ? 'Paid' : 'Generated'}`,
+      description: `#${invoice.invoice_number}`,
+      date: invoice.created_at,
+      status: invoice.status,
+      icon: FileText,
+      amount: parseFloat(invoice.amount || 0)
+    })),
+    ...projects.map(project => ({
+      id: project.id,
+      type: 'project',
+      title: `Project ${project.status === 'completed' ? 'Completed' : 'Started'}`,
+      description: project.name,
+      date: project.created_at,
+      status: project.status,
+      icon: Briefcase,
+      amount: null
+    }))
+  ]
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  .slice(0, 10);
 
-  const fetchActivities = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("Fetching activities...");
-
-      const response = await fetch("/api/activity-logs?limit=10", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch activity logs");
-      }
-
-      const data = await response.json();
-      console.log("Fetched activities:", data);
-      setActivities(data);
-    } catch (error: any) {
-      console.error("Error fetching activity logs:", error);
-      setError(error.message || "Failed to fetch activities");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActivities();
-  }, []);
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case "CREATE":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "UPDATE":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "DELETE":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "SEND":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+      case 'completed':
+      case 'paid':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const getEntityTypeIcon = (entityType: string) => {
-    switch (entityType) {
-      case "PROJECT":
-        return "🏗️";
-      case "TASK":
-        return "📋";
-      case "CUSTOMER":
-        return "👥";
-      case "INVOICE":
-        return "📄";
-      case "QUOTATION":
-        return "💼";
-      case "EMPLOYEE":
-        return "👤";
-      case "PAYMENT":
-        return "���";
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'customer':
+        return 'bg-blue-50 border-blue-200';
+      case 'invoice':
+        return 'bg-green-50 border-green-200';
+      case 'project':
+        return 'bg-purple-50 border-purple-200';
       default:
-        return "📌";
+        return 'bg-gray-50 border-gray-200';
     }
   };
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case 'customer':
+        return 'text-blue-600';
+      case 'invoice':
+        return 'text-green-600';
+      case 'project':
+        return 'text-purple-600';
+      default:
+        return 'text-gray-600';
+    }
   };
 
-  const formatTimeAgo = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center space-x-2">
-          <Activity className="h-5 w-5 text-primary" />
-          <div>
-            <CardTitle className="text-base font-medium">
-              Recent Activities
-            </CardTitle>
-            <CardDescription>
-              Latest system activities and updates
-            </CardDescription>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchActivities}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex h-[300px] items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : error ? (
-          <div className="flex h-[300px] flex-col items-center justify-center space-y-2">
-            <p className="text-sm text-destructive">Error: {error}</p>
-            <Button variant="outline" size="sm" onClick={fetchActivities}>
-              Try Again
-            </Button>
-          </div>
-        ) : activities.length === 0 ? (
-          <div className="flex h-[300px] items-center justify-center">
-            <p className="text-muted-foreground">No recent activities</p>
-          </div>
-        ) : (
-          <div className="space-y-6 max-h-[400px] overflow-y-auto">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+    <ScrollArea className="h-[400px] pr-4">
+      <div className="space-y-3">
+        {recentActivities.length > 0 ? (
+          recentActivities.map((activity) => {
+            const IconComponent = activity.icon;
+            
+            return (
+              <div 
+                key={activity.id} 
+                className={`
+                  relative p-4 rounded-lg border-2 transition-all duration-200 
+                  hover:shadow-md hover:scale-[1.02] cursor-pointer
+                  ${getTypeColor(activity.type)}
+                `}
               >
-                <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={activity.user.profilePicture || ""}
-                    alt={`${activity.user.firstName} ${activity.user.lastName}`}
-                  />
-                  <AvatarFallback>
-                    {getInitials(
-                      activity.user.firstName,
-                      activity.user.lastName
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-sm">
-                      {activity.user.firstName} {activity.user.lastName}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className={`text-xs ${getActionColor(activity.action)}`}
-                    >
-                      {activity.action}
-                    </Badge>
-                    <span className="text-sm flex items-center gap-1">
-                      <span>{getEntityTypeIcon(activity.entityType)}</span>
-                      <span className="text-muted-foreground">
-                        {activity.entityType.toLowerCase()}
-                      </span>
-                    </span>
+                {/* Notification Header */}
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-full bg-white ${getIconColor(activity.type)}`}>
+                      <IconComponent className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-gray-900">
+                        {activity.title}
+                      </h4>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {activity.description}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.details}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTimeAgo(activity.createdAt)}
-                  </p>
+                  
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs font-medium px-2 py-1 border ${getStatusColor(activity.status)}`}
+                  >
+                    {activity.status.replace('_', ' ')}
+                  </Badge>
                 </div>
+
+                {/* Notification Content */}
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatDate(activity.date)}</span>
+                    </div>
+                    
+                    {activity.amount && (
+                      <div className="flex items-center space-x-1">
+                        <DollarSign className="h-3 w-3" />
+                        <span className="font-medium text-gray-700">
+                          ${activity.amount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+                    {new Date(activity.date).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </div>
+                </div>
+
+                {/* Notification Indicator */}
+                <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${
+                  activity.status === 'pending' || activity.status === 'in_progress' 
+                    ? 'bg-yellow-400 animate-pulse' 
+                    : 'bg-green-400'
+                }`} />
               </div>
-            ))}
+            );
+          })
+        ) : (
+          <div className="text-center py-12">
+            <div className="bg-gray-50 rounded-lg p-8 border-2 border-dashed border-gray-200">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-sm">No recent activities</p>
+              <p className="text-gray-400 text-xs mt-1">
+                Activities will appear here as they happen
+              </p>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ScrollArea>
   );
 }

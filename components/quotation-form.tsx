@@ -67,7 +67,6 @@ export function QuotationForm({ quotationId, isEditing = false }: QuotationFormP
   // Fetch customers and vessels using RTK Query
   const { data: customers = [], isLoading: isLoadingCustomers } = useGetCustomersQuery({})
   const { data: vessels = [], isLoading: isLoadingVessels } = useGetVesselsQuery({})
-console.log("Vessels data:", vessels);
   const isLoading = isAdding || isUpdating
 
   const [subtotal, setSubtotal] = useState<number>(0)
@@ -106,10 +105,9 @@ console.log("Vessels data:", vessels);
     },
   })
 
-  const { watch, setValue, reset } = form
- const watchCustomer = useWatch({ control: form.control, name: "customer" });
-const watchItems = useWatch({ control: form.control, name: "items" });
-
+  const { setValue, reset } = form
+  const watchCustomer = useWatch({ control: form.control, name: "customer" });
+  const watchItems = useWatch({ control: form.control, name: "items" });
 
   // Set form data when quotation data is loaded for editing - FIXED INFINITE LOOP
   useEffect(() => {
@@ -127,7 +125,7 @@ const watchItems = useWatch({ control: form.control, name: "items" });
         terms_and_conditions: quotationData.terms_and_conditions || "",
         customer: quotationData.customer || "",
         vessel: quotationData.vessel || "",
-        items: quotationData.items?.map(item => ({
+        items: quotationData.items?.map((item: any) => ({
           description: item.description || "",
           quantity: item.quantity || 1,
           unit_price: parseFloat(item.unit_price) || 0,
@@ -144,23 +142,20 @@ const watchItems = useWatch({ control: form.control, name: "items" });
   }, [quotationData, isEditing, reset, isInitialized])
 
   // Filter vessels when customer changes
-// ✅ Fix vessel filtering (use 'owner' instead of 'customer')
-useEffect(() => {
-  if (!vessels.length) return;
+  useEffect(() => {
+    if (!vessels.length) return;
 
-  const filtered = watchCustomer
-    ? vessels.filter((v: any) => v.owner === watchCustomer)
-    : [];
+    const filtered = watchCustomer
+      ? vessels.filter((v: any) => v.owner === watchCustomer)
+      : [];
 
-  setFilteredVessels(filtered);
+    setFilteredVessels(filtered);
 
-  const currentVessel = form.getValues("vessel");
-  if (currentVessel && !filtered.some((v: any) => v.id === currentVessel)) {
-    form.setValue("vessel", "");
-  }
-}, [watchCustomer, vessels]);
-
-
+    const currentVessel = form.getValues("vessel");
+    if (currentVessel && !filtered.some((v: any) => v.id === currentVessel)) {
+      form.setValue("vessel", "");
+    }
+  }, [watchCustomer, vessels, form]);
 
   // Generate quotation number for new quotations - FIXED INFINITE LOOP
   useEffect(() => {
@@ -264,7 +259,7 @@ useEffect(() => {
         delivery_days: item.delivery_days,
       }))
 
-      const quotationData = {
+      const payload = {
         ...data,
         items: itemsData,
         status: "Draft",
@@ -273,7 +268,7 @@ useEffect(() => {
       if (isEditing && quotationId) {
         await updateQuotation({
           id: quotationId,
-          ...quotationData
+          ...payload
         }).unwrap()
         
         toast({
@@ -281,7 +276,7 @@ useEffect(() => {
           description: "Quotation updated successfully",
         })
       } else {
-        await addQuotation(quotationData).unwrap()
+        await addQuotation(payload).unwrap()
         
         toast({
           title: "Success",
@@ -328,16 +323,16 @@ useEffect(() => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Quotation Details */}
               <FormField
                 control={form.control}
                 name="quotation_number"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Quotation Number</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly className="bg-gray-50" />
+                      <Input {...field} readOnly className="bg-gray-50 w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -348,10 +343,10 @@ useEffect(() => {
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -362,10 +357,10 @@ useEffect(() => {
                 control={form.control}
                 name="valid_until"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Valid Until</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -377,11 +372,11 @@ useEffect(() => {
                 control={form.control}
                 name="customer"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Customer *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCustomers}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           {isLoadingCustomers ? (
                             <div className="flex items-center gap-2">
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -392,7 +387,7 @@ useEffect(() => {
                           )}
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-72">
                         {customers.length === 0 ? (
                           <SelectItem value="no-customers" disabled>
                             No customers available
@@ -412,65 +407,63 @@ useEffect(() => {
               />
 
               {/* Vessel Selection */}
-             {/* Vessel Selection */}
-<FormField
-  control={form.control}
-  name="vessel"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Vessel (Optional)</FormLabel>
-      <Select
-        onValueChange={field.onChange}
-        value={field.value}
-        disabled={isLoadingVessels || !watchCustomer}
-      >
-        <FormControl>
-          <SelectTrigger>
-            {isLoadingVessels ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading vessels...
-              </div>
-            ) : (
-              <SelectValue
-                placeholder={watchCustomer ? "Select vessel" : "Select customer first"}
+              <FormField
+                control={form.control}
+                name="vessel"
+                render={({ field }) => (
+                  <FormItem className="min-w-0">
+                    <FormLabel>Vessel (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isLoadingVessels || !watchCustomer}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          {isLoadingVessels ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading vessels...
+                            </div>
+                          ) : (
+                            <SelectValue
+                              placeholder={watchCustomer ? "Select vessel" : "Select customer first"}
+                            />
+                          )}
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-72">
+                        {!watchCustomer ? (
+                          <SelectItem value="no-customer" disabled>
+                            Please select a customer first
+                          </SelectItem>
+                        ) : filteredVessels.length === 0 ? (
+                          <SelectItem value="no-vessels" disabled>
+                            No vessels found for this customer
+                          </SelectItem>
+                        ) : (
+                          filteredVessels.map((vessel: any) => (
+                            <SelectItem key={vessel.id} value={vessel.id}>
+                              {vessel.name} ({vessel.type})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            )}
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {!watchCustomer ? (
-            <SelectItem value="no-customer" disabled>
-              Please select a customer first
-            </SelectItem>
-          ) : filteredVessels.length === 0 ? (
-            <SelectItem value="no-vessels" disabled>
-              No vessels found for this customer
-            </SelectItem>
-          ) : (
-            filteredVessels.map((vessel: any) => (
-              <SelectItem key={vessel.id} value={vessel.id}>
-                {vessel.name} ({vessel.type})
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
 
               {/* Project */}
               <FormField
                 control={form.control}
                 name="project"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Project</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter project name" />
+                      <Input {...field} placeholder="Enter project name" className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -482,10 +475,10 @@ useEffect(() => {
                 control={form.control}
                 name="place_of_supply"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Place of Supply *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Mumbai, Maharashtra" />
+                      <Input {...field} placeholder="e.g., Mumbai, Maharashtra" className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -494,15 +487,15 @@ useEffect(() => {
             </div>
 
             {/* Marine Specific Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="design_scope"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Design Scope (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., General Arrangement Plans" />
+                      <Input {...field} placeholder="e.g., General Arrangement Plans" className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -513,10 +506,10 @@ useEffect(() => {
                 control={form.control}
                 name="delivery_location"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Delivery Location (Optional)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Mumbai Port" />
+                      <Input {...field} placeholder="e.g., Mumbai Port" className="w-full" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -527,7 +520,7 @@ useEffect(() => {
                 control={form.control}
                 name="revision_rounds"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Revision Rounds</FormLabel>
                     <FormControl>
                       <Input
@@ -535,6 +528,7 @@ useEffect(() => {
                         min="1"
                         {...field}
                         onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 1)}
+                        className="w-full"
                       />
                     </FormControl>
                     <FormMessage />
@@ -543,126 +537,256 @@ useEffect(() => {
               />
             </div>
 
-            {/* Items Table */}
-            <div className="space-y-4">
+            {/* Items - Mobile (Cards) */}
+            <div className="space-y-4 md:hidden">
+              <h3 className="text-lg font-medium">Items</h3>
+              <div className="space-y-3">
+                {form.watch("items")?.map((item, index) => (
+                  <Card key={`mobile-${index}`}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="space-y-1">
+                        <FormLabel className="text-xs">Description</FormLabel>
+                        <Input
+                          placeholder="Item description"
+                          {...form.register(`items.${index}.description`)}
+                          onChange={(e) => {
+                            form.setValue(`items.${index}.description`, e.target.value)
+                          }}
+                        />
+                        {form.formState.errors.items?.[index]?.description && (
+                          <p className="text-xs text-red-500 mt-1">
+                            {form.formState.errors.items[index]?.description?.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Quantity</FormLabel>
+                          <Input
+                            type="number"
+                            min="1"
+                            {...form.register(`items.${index}.quantity`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form.setValue(`items.${index}.quantity`, Number.parseFloat(e.target.value) || 1)
+                              updateItemTotal(index)
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Unit Price (₹)</FormLabel>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...form.register(`items.${index}.unit_price`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form.setValue(`items.${index}.unit_price`, Number.parseFloat(e.target.value) || 0)
+                              updateItemTotal(index)
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Tax (%)</FormLabel>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            {...form.register(`items.${index}.tax_percent`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form.setValue(`items.${index}.tax_percent`, Number.parseFloat(e.target.value) || 0)
+                              updateItemTotal(index)
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Total (₹)</FormLabel>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`items.${index}.total`, {
+                              valueAsNumber: true,
+                            })}
+                            readOnly
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Plan Type</FormLabel>
+                          <Input
+                            placeholder="Plan type"
+                            {...form.register(`items.${index}.plan_type`)}
+                            onChange={(e) => {
+                              form.setValue(`items.${index}.plan_type`, e.target.value)
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <FormLabel className="text-xs">Delivery Days</FormLabel>
+                          <Input
+                            type="number"
+                            min="1"
+                            {...form.register(`items.${index}.delivery_days`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form.setValue(`items.${index}.delivery_days`, Number.parseInt(e.target.value) || 30)
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} aria-label="Remove item">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Button type="button" variant="outline" onClick={addItem} className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Add Item
+              </Button>
+              {form.formState.errors.items?.message && (
+                <p className="text-sm text-red-500 mt-1">{form.formState.errors.items.message}</p>
+              )}
+            </div>
+
+            {/* Items - Desktop/Table */}
+            <div className="space-y-4 hidden md:block">
               <h3 className="text-lg font-medium">Items</h3>
               <Card>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="w-[100px]">Quantity</TableHead>
-                        <TableHead className="w-[120px]">Unit Price (₹)</TableHead>
-                        <TableHead className="w-[100px]">Tax (%)</TableHead>
-                        <TableHead className="w-[120px]">Total (₹)</TableHead>
-                        <TableHead className="w-[120px]">Plan Type</TableHead>
-                        <TableHead className="w-[100px]">Delivery Days</TableHead>
-                        <TableHead className="w-[80px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {form.watch("items")?.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Input
-                              placeholder="Item description"
-                              {...form.register(`items.${index}.description`)}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.description`, e.target.value)
-                              }}
-                            />
-                            {form.formState.errors.items?.[index]?.description && (
-                              <p className="text-sm text-red-500 mt-1">
-                                {form.formState.errors.items[index]?.description?.message}
-                              </p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              {...form.register(`items.${index}.quantity`, {
-                                valueAsNumber: true,
-                              })}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.quantity`, Number.parseFloat(e.target.value) || 1)
-                                updateItemTotal(index)
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...form.register(`items.${index}.unit_price`, {
-                                valueAsNumber: true,
-                              })}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.unit_price`, Number.parseFloat(e.target.value) || 0)
-                                updateItemTotal(index)
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...form.register(`items.${index}.tax_percent`, {
-                                valueAsNumber: true,
-                              })}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.tax_percent`, Number.parseFloat(e.target.value) || 0)
-                                updateItemTotal(index)
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...form.register(`items.${index}.total`, {
-                                valueAsNumber: true,
-                              })}
-                              readOnly
-                              className="bg-gray-50"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              placeholder="Plan type"
-                              {...form.register(`items.${index}.plan_type`)}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.plan_type`, e.target.value)
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              {...form.register(`items.${index}.delivery_days`, {
-                                valueAsNumber: true,
-                              })}
-                              onChange={(e) => {
-                                form.setValue(`items.${index}.delivery_days`, Number.parseInt(e.target.value) || 30)
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[900px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="w-[100px]">Quantity</TableHead>
+                          <TableHead className="w-[140px]">Unit Price (₹)</TableHead>
+                          <TableHead className="w-[100px]">Tax (%)</TableHead>
+                          <TableHead className="w-[140px]">Total (₹)</TableHead>
+                          <TableHead className="w-[140px]">Plan Type</TableHead>
+                          <TableHead className="w-[120px]">Delivery Days</TableHead>
+                          <TableHead className="w-[80px]">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {form.watch("items")?.map((item, index) => (
+                          <TableRow key={`desktop-${index}`}>
+                            <TableCell className="min-w-[240px]">
+                              <Input
+                                placeholder="Item description"
+                                {...form.register(`items.${index}.description`)}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.description`, e.target.value)
+                                }}
+                              />
+                              {form.formState.errors.items?.[index]?.description && (
+                                <p className="text-sm text-red-500 mt-1">
+                                  {form.formState.errors.items[index]?.description?.message}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="1"
+                                {...form.register(`items.${index}.quantity`, {
+                                  valueAsNumber: true,
+                                })}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.quantity`, Number.parseFloat(e.target.value) || 1)
+                                  updateItemTotal(index)
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                {...form.register(`items.${index}.unit_price`, {
+                                  valueAsNumber: true,
+                                })}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.unit_price`, Number.parseFloat(e.target.value) || 0)
+                                  updateItemTotal(index)
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                {...form.register(`items.${index}.tax_percent`, {
+                                  valueAsNumber: true,
+                                })}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.tax_percent`, Number.parseFloat(e.target.value) || 0)
+                                  updateItemTotal(index)
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...form.register(`items.${index}.total`, {
+                                  valueAsNumber: true,
+                                })}
+                                readOnly
+                                className="bg-gray-50"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                placeholder="Plan type"
+                                {...form.register(`items.${index}.plan_type`)}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.plan_type`, e.target.value)
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="1"
+                                {...form.register(`items.${index}.delivery_days`, {
+                                  valueAsNumber: true,
+                                })}
+                                onChange={(e) => {
+                                  form.setValue(`items.${index}.delivery_days`, Number.parseInt(e.target.value) || 30)
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} aria-label="Remove item">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
-              <Button type="button" variant="outline" onClick={addItem}>
+              <Button type="button" variant="outline" onClick={addItem} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" /> Add Item
               </Button>
               {form.formState.errors.items?.message && (
@@ -671,31 +795,31 @@ useEffect(() => {
             </div>
 
             {/* Totals */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1 sm:space-y-2">
                 <h4 className="text-sm font-medium">Subtotal</h4>
-                <p className="text-2xl font-bold">{formatCurrency(subtotal)}</p>
+                <p className="text-xl sm:text-2xl font-bold">{formatCurrency(subtotal)}</p>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <h4 className="text-sm font-medium">Tax</h4>
-                <p className="text-2xl font-bold">{formatCurrency(tax)}</p>
+                <p className="text-xl sm:text-2xl font-bold">{formatCurrency(tax)}</p>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <h4 className="text-sm font-medium">Total</h4>
-                <p className="text-2xl font-bold">{formatCurrency(total)}</p>
+                <p className="text-xl sm:text-2xl font-bold">{formatCurrency(total)}</p>
               </div>
             </div>
 
             {/* Notes and Terms & Conditions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Add notes here..." className="min-h-[120px]" {...field} />
+                      <Textarea placeholder="Add notes here..." className="min-h-[120px] w-full" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -706,10 +830,10 @@ useEffect(() => {
                 control={form.control}
                 name="terms_and_conditions"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0">
                     <FormLabel>Terms & Conditions</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Add terms and conditions here..." className="min-h-[120px]" {...field} />
+                      <Textarea placeholder="Add terms and conditions here..." className="min-h-[120px] w-full" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -718,11 +842,11 @@ useEffect(() => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-between pt-4">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 sm:justify-between pt-4">
+              <Button type="button" variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLoading ? "Saving..." : isEditing ? "Update Quotation" : "Create Quotation"}
               </Button>

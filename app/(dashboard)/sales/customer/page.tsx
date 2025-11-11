@@ -1,53 +1,16 @@
-// app/sales/customer/page.tsx
+// app/sales/customers/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTableEnhanced } from "@/components/ui/data-table-enhanced";
-import { PageHeader } from "@/components/ui/page-header";
-import {
-  Eye,
-  Pencil,
-  Plus,
-  Trash2,
-  Building,
-  User,
-  Users,
-  TrendingUp,
-  MapPin,
-  Phone,
-  Loader2,
-} from "lucide-react";
+import { useMemo } from "react";
+import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
-import {
   useGetCustomersQuery,
-  useGetCustomerStatsQuery,
   useDeleteCustomerMutation,
 } from "@/redux/Service/customer";
+import { Eye, Edit, Trash2, Building, User, Phone, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomerContact {
   id: string;
@@ -88,67 +51,15 @@ interface Customer {
   created_at: string;
 }
 
-interface CustomerStats {
-  totalCustomers: number;
-  companyCustomers: number;
-  individualCustomers: number;
-  activeCustomers: number;
-  newThisMonth: number;
-  totalProjects: number;
-  totalRevenue: number;
-  avgProjectValue: number;
-}
-
 export default function CustomersPage() {
-  const router = useRouter();
   const { toast } = useToast();
-
-  // RTK Query hooks
-  const { 
-    data: customers = [], 
-    isLoading, 
-    error,
-    refetch 
-  } = useGetCustomersQuery();
-  
-  const { data: stats } = useGetCustomerStatsQuery();
+  const { data: customers = [], isLoading, error } = useGetCustomersQuery({});
   const [deleteCustomer] = useDeleteCustomerMutation();
-
-  // Handle errors
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteCustomer(id).unwrap();
-      toast({
-        title: "Success",
-        description: "Customer deleted successfully",
-      });
-    } catch (error) {
-      console.error("Error deleting customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete customer",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Get primary contact or first contact
   const getPrimaryContact = (customer: Customer) => {
     if (!customer.contacts || customer.contacts.length === 0) return null;
-
-    const primaryContact = customer.contacts.find(
-      (contact) => contact.is_primary
-    );
+    const primaryContact = customer.contacts.find((contact) => contact.is_primary);
     return primaryContact || customer.contacts[0];
   };
 
@@ -157,253 +68,205 @@ export default function CustomersPage() {
     return customer.addresses.find(addr => addr.address_type === "Billing");
   };
 
-  const columns: ColumnDef<Customer>[] = [
+  const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(numAmount);
+  };
+
+  const columns = [
     {
-      accessorKey: "customer_type",
-      header: "Type",
-      cell: ({ row }) => {
-        const type = row.original.customer_type;
+      key: "customer_type",
+      label: "Type",
+      render: (value: string, customer: Customer) => (
+        <div className="flex items-center">
+          {value === "Company" ? (
+            <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+          ) : (
+            <User className="h-4 w-4 mr-2 text-muted-foreground" />
+          )}
+          <Badge variant="outline">
+            {value}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      key: "company_name",
+      label: "Name",
+      sortable: true,
+      render: (value: string, customer: Customer) => {
+        const contact = getPrimaryContact(customer);
         return (
-          <div className="flex items-center">
-            {type === "Company" ? (
-              <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-            ) : (
-              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+          <div>
+            <div>{customer.customer_type === "Company" ? value : `${contact?.first_name} ${contact?.last_name}`}</div>
+            {customer.customer_type === "Company" && contact && (
+              <div className="text-sm text-muted-foreground">
+                {contact.first_name} {contact.last_name}
+              </div>
             )}
-            <Badge variant="outline">
-              {type}
-            </Badge>
           </div>
         );
       },
     },
     {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => {
-        const customer = row.original;
+      key: "contact",
+      label: "Contact",
+      render: (_: any, customer: Customer) => {
         const contact = getPrimaryContact(customer);
-
-        if (customer.customer_type === "Company") {
-          return (
-            <div>
-              <div className="font-medium">{customer.company_name || "N/A"}</div>
-              {contact && (
-                <div className="text-sm text-muted-foreground">
-                  {contact.first_name} {contact.last_name}
-                </div>
-              )}
-            </div>
-          );
-        } else {
-          return contact ? `${contact.first_name} ${contact.last_name}` : "N/A";
-        }
-      },
-    },
-    {
-      accessorKey: "contact",
-      header: "Contact",
-      cell: ({ row }) => {
-        const customer = row.original;
-        const contact = getPrimaryContact(customer);
-
-        if (!contact) return "N/A";
-
-        return (
+        return contact ? (
           <div>
             <div className="flex items-center gap-1">
               <Phone className="h-3 w-3 text-muted-foreground" />
-              <span className="text-sm">{contact.phone}</span>
+              <span>{contact.phone}</span>
             </div>
             <div className="text-sm text-muted-foreground">{contact.email}</div>
           </div>
+        ) : (
+          "N/A"
         );
       },
     },
     {
-      accessorKey: "gst_number",
-      header: "GST Number",
-      cell: ({ row }) => row.original.gst_number || "N/A",
+      key: "gst_number",
+      label: "GST Number",
+      render: (value: string) => value || "N/A",
     },
     {
-      accessorKey: "location",
-      header: "Location",
-      cell: ({ row }) => {
-        const address = getBillingAddress(row.original);
-        if (!address) return "N/A";
-        return (
+      key: "location",
+      label: "Location",
+      render: (_: any, customer: Customer) => {
+        const address = getBillingAddress(customer);
+        return address ? (
           <div className="flex items-center gap-1">
             <MapPin className="h-3 w-3 text-muted-foreground" />
             <span>{`${address.city}, ${address.state}`}</span>
           </div>
+        ) : (
+          "N/A"
         );
       },
     },
     {
-      accessorKey: "credit_limit",
-      header: "Credit Limit",
-      cell: ({ row }) => {
-        const creditLimit = parseFloat(row.original.credit_limit);
-        return new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR'
-        }).format(creditLimit);
-      },
+      key: "credit_limit",
+      label: "Credit Limit",
+      sortable: true,
+      render: (value: string) => formatCurrency(value),
+      className: "text-right",
+    },
+  ];
+
+  const filters = [
+    {
+      key: "customer_type",
+      label: "Customer Type",
+      type: "select" as const,
+      options: [
+        { value: "Company", label: "Company" },
+        { value: "Individual", label: "Individual" },
+      ],
+    },
+  ];
+
+  const actions = [
+    {
+      type: "view" as const,
+      label: "View Details",
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      href: (customer: Customer) => `/sales/customer/${customer.id}`,
     },
     {
-      id: "actions",
-      cell: ({ row }) => {
-        const customer = row.original;
+      type: "edit" as const,
+      label: "Edit",
+      icon: <Edit className="h-4 w-4 mr-2" />,
+      href: (customer: Customer) => `/sales/customer/${customer.id}/edit`,
+    },
+    {
+      type: "delete" as const,
+      label: "Delete",
+      icon: <Trash2 className="h-4 w-4 mr-2" />,
+    },
+  ];
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => router.push(`/sales/customer/${customer.id}`)}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  router.push(`/sales/customer/${customer.id}/edit`)
+  const handleDelete = async (id: string) => {
+    await deleteCustomer(id).unwrap();
+  };
+
+  const renderMobileCard = (customer: Customer) => {
+    const contact = getPrimaryContact(customer);
+    const address = getBillingAddress(customer);
+    
+    return (
+      <Link key={customer.id} href={`/sales/customer/${customer.id}`}>
+        <div className="p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer bg-card">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <p className="font-semibold text-sm line-clamp-1">
+                {customer.customer_type === "Company" 
+                  ? customer.company_name 
+                  : `${contact?.first_name} ${contact?.last_name}`
                 }
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete the customer and all
-                      associated data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDelete(customer.id)}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  const breadcrumbs = [
-    { label: "Sales", href: "/sales" },
-    { label: "Customers" },
-  ];
+              </p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {customer.id.slice(0, 8)}...
+              </p>
+            </div>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+              customer.customer_type === "Company" 
+                ? "bg-blue-100 text-blue-800" 
+                : "bg-green-100 text-green-800"
+            }`}>
+              {customer.customer_type}
+            </span>
+          </div>
+          <div className="space-y-2 text-sm">
+            {contact && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Contact:</span>
+                <span className="font-medium">{contact.first_name} {contact.last_name}</span>
+              </div>
+            )}
+            {contact && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Phone:</span>
+                <span className="font-medium">{contact.phone}</span>
+              </div>
+            )}
+            {address && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Location:</span>
+                <span className="font-medium">{address.city}, {address.state}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Credit Limit:</span>
+              <span className="font-medium">{formatCurrency(customer.credit_limit)}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Customers"
-        description="Manage your customer database and relationships"
-        breadcrumbs={breadcrumbs}
-        action={
-          <Button onClick={() => router.push("/sales/customer/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Customer
-          </Button>
-        }
-      />
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Customers
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.companyCustomers || 0} companies, {stats?.individualCustomers || 0}{" "}
-              individuals
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Customers
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeCustomers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              With ongoing projects
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              New This Month
-            </CardTitle>
-            <Plus className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.newThisMonth || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Recently added customers
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Projects
-            </CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalProjects || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all customers
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <DataTableEnhanced
-        columns={columns}
-        data={customers}
-        searchKey="company_name"
-        searchPlaceholder="Search customers..."
-        onAdd={() => router.push("/sales/customer/new")}
-        addLabel="Add Customer"
-        loading={isLoading}
-      />
-    </div>
+    <DataTable
+      data={customers}
+      columns={columns}
+      actions={actions}
+      filters={filters}
+      title="Customers"
+      description="Manage your customer database and relationships"
+      createButton={{
+        label: "Add Customer",
+        href: "/sales/customer/new",
+      }}
+      isLoading={isLoading}
+      error={error}
+      onDelete={handleDelete}
+      renderMobileCard={renderMobileCard}
+    />
   );
 }

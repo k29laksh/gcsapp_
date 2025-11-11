@@ -63,55 +63,63 @@ export function AttendanceForm({ attendance, isEditing = false }: AttendanceForm
     },
   })
 
-  const onSubmit = async (values: AttendanceFormValues) => {
-    try {
-      // Format the data exactly as required by the API
-      const payload = {
-        employee_id: values.employee,
-        status: values.status,
-        notes: values.notes || "",
-      }
+const onSubmit = async (values: AttendanceFormValues) => {
+  try {
+    // ✅ Log the raw form values before formatting
+    console.log("Raw form data before sending:", values)
 
-      console.log("Submitting attendance data:", payload)
+    // Format the data exactly as required by the API
+    const payload = {
+      employee_id: values.employee,
+      date: values.date ? values.date.toISOString().split("T")[0] : "", // include date if needed
+      status: values.status,
+      check_in: values.check_in || null,
+      check_out: values.check_out || null,
+      notes: values.notes || "",
+    }
 
-      if (isEditing && attendance?.id) {
-        await updateAttendance({ id: attendance.id, ...payload }).unwrap()
-        toast({
-          title: "Success",
-          description: "Attendance updated successfully",
-        })
-      } else {
-        await addAttendance(payload).unwrap()
-        toast({
-          title: "Success",
-          description: "Attendance marked successfully",
-        })
-      }
+    // ✅ Log the formatted payload before sending
+    console.log("Formatted payload to send:", payload)
 
-      router.push("/hr/attendance")
-      router.refresh()
-    } catch (error: any) {
-      console.error("Error saving attendance:", error)
-      
-      let errorMessage = `Failed to ${isEditing ? "update" : "mark"} attendance`
-      
-      if (error?.data) {
-        if (typeof error.data === 'string') {
-          errorMessage = error.data
-        } else if (error.data.message) {
-          errorMessage = error.data.message
-        } else if (error.data.detail) {
-          errorMessage = error.data.detail
-        }
-      }
-
+    if (isEditing && attendance?.id) {
+      await updateAttendance({ id: attendance.id, ...payload }).unwrap()
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
+        title: "Success",
+        description: "Attendance updated successfully",
+      })
+    } else {
+      await addAttendance(payload).unwrap()
+      toast({
+        title: "Success",
+        description: "Attendance marked successfully",
       })
     }
+
+    router.push("/hr/attendance")
+    router.refresh()
+  } catch (error: any) {
+    console.error("Error saving attendance:", error)
+
+    let errorMessage = `Failed to ${isEditing ? "update" : "mark"} attendance`
+
+    if (error?.data) {
+      if (typeof error.data === "string") {
+        errorMessage = error.data
+      } else if (error.data.message) {
+        errorMessage = error.data.message
+      } else if (error.data.detail) {
+        errorMessage = error.data.detail
+      }
+    }
+
+    toast({
+      title: "Error",
+      description: errorMessage,
+      variant: "destructive",
+    })
   }
+}
+
 
   const isLoading = isAdding || isUpdating
 

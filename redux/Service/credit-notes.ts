@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const creditNoteApi = createApi({
   reducerPath: 'creditNoteApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: 'http://127.0.0.1:8000/creditnotes',
+    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/creditnotes`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {
@@ -65,6 +65,16 @@ export const creditNoteApi = createApi({
       ],
     }),
 
+    // Update credit note item
+    updateCreditNoteItem: builder.mutation({
+      query: ({ itemId, ...data }) => ({
+        url: `/items/${itemId}/`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['CreditNote'],
+    }),
+
     // Delete credit note
     deleteCreditNote: builder.mutation({
       query: (id: string) => ({
@@ -116,6 +126,7 @@ export const {
   useGenerateCreditNoteNumberQuery,
   useAddCreditNoteMutation,
   useUpdateCreditNoteMutation,
+  useUpdateCreditNoteItemMutation,
   useDeleteCreditNoteMutation,
   useSendCreditNoteMutation,
   useLazyDownloadCreditNotePdfQuery,
