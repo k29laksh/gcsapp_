@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const attendanceApi = createApi({
   reducerPath: 'attendanceApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/attendance`,
+    baseUrl: 'http://127.0.0.1:8000/attendance',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

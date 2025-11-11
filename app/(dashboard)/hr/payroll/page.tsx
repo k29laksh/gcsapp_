@@ -217,10 +217,9 @@ export default function PayrollPage() {
               <DropdownMenuItem onClick={() => router.push(`/hr/payroll/${record.id}/edit`)}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() =>router.push(`/hr/payroll/${record.id}/payslip`)}>
-                  <Download className="mr-2 h-4 w-4" /> View / Download Payslip
-                </DropdownMenuItem>
-
+              <DropdownMenuItem onClick={() => handleDownloadPayslip(record.pdf)}>
+                <Download className="mr-2 h-4 w-4" /> Download Payslip
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleDelete(record.id)} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -264,7 +263,7 @@ export default function PayrollPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Payroll</CardTitle>
@@ -371,4 +370,3 @@ export default function PayrollPage() {
     </div>
   )
 }
-

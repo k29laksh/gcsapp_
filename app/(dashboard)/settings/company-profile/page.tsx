@@ -1,21 +1,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { prisma } from "@/lib/prisma"
 import { ImageIcon, Pencil } from "lucide-react"
 
 export default async function CompanyProfilePage() {
-
-  const companyProfile = {
-    name: "GLOBAL CONSULTANCY SERVICES",
-    address: "016, Loha Bhavan 93, P D'Mello Road, Carnac Bunder",
-    city: "Mumbai",
-    state: "Maharashtra",
-    postalCode: "400 009",
-    country: "India",
-    email: "admin@globalconsultancyservices.net",
-    phone: "+919869990250",
-    website: "www.globalconsultancyservices.net",
-  };
+  const companyProfile = await prisma.companyProfile.findFirst()
 
   return (
     <div className="space-y-6">
@@ -193,4 +183,3 @@ export default async function CompanyProfilePage() {
     </div>
   )
 }
-

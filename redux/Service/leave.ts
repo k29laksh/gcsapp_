@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const leaveApi = createApi({
   reducerPath: 'leaveApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl:  `${process.env.NEXT_PUBLIC_BACKEND_URL}/leave`,
+    baseUrl: 'http://localhost:8000/leave',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

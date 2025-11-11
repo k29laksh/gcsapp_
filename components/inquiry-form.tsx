@@ -137,7 +137,7 @@ export function InquiryForm({ inquiryId, isEditing = false }: InquiryFormProps) 
           <CardTitle>{isEditing ? "Edit Inquiry" : "New Inquiry"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="date">Inquiry Date *</Label>
               <Input
@@ -189,7 +189,7 @@ export function InquiryForm({ inquiryId, isEditing = false }: InquiryFormProps) 
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="source">Source</Label>
               <Select value={formData.source} onValueChange={(value) => handleSelectChange("source", value)}>
@@ -223,7 +223,7 @@ export function InquiryForm({ inquiryId, isEditing = false }: InquiryFormProps) 
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="budget">Budget (₹)</Label>
               <Input

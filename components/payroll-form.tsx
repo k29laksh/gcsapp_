@@ -143,7 +143,7 @@ export function PayrollForm({ payroll, isEditing = false }: PayrollFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Employee Field */}
               <FormField
                 control={form.control}

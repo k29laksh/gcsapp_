@@ -37,15 +37,6 @@ import {
   CheckCircle,
   DollarSign,
 } from "lucide-react";
-import { 
-  useGetCustomersQuery} from "@/redux/Service/customer";
-import {
-  useGetInvoicesQuery} from "@/redux/Service/invoice";
-import {
-  useGetProjectsQuery} from "@/redux/Service/projects";
-import {
-  useGetTasksQuery
-} from "@/redux/Service/tasks";
 
 interface StatsOverviewProps {
   stats: {
@@ -62,167 +53,56 @@ interface StatsOverviewProps {
 
 export function StatsOverview({ stats }: StatsOverviewProps) {
   const [loading, setLoading] = useState(true);
-  
-  // RTK Query hooks
-  const { 
-    data: customersData = [], 
-    isLoading: customersLoading 
-  } = useGetCustomersQuery();
-  
-  const { 
-    data: invoicesData = [], 
-    isLoading: invoicesLoading 
-  } = useGetInvoicesQuery();
-  
-  const { 
-    data: projectsData = [], 
-    isLoading: projectsLoading 
-  } = useGetProjectsQuery();
-  
-  const { 
-    data: tasksData = [], 
-    isLoading: tasksLoading 
-  } = useGetTasksQuery();
-  
- 
+  const [apiStats, setApiStats] = useState<any>({});
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [purchasesData, setPurchasesData] = useState<any[]>([]);
+  const [projectStatusData, setProjectStatusData] = useState<any[]>([]);
 
-  const isLoading = customersLoading || invoicesLoading || projectsLoading || tasksLoading ;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-  // Calculate stats from RTK Query data
-  const calculatedStats = {
-    // Customer stats
-    totalCustomers: customersData.length,
-    newCustomers: customersData.filter((customer: any) => {
-      const createdDate = new Date(customer.created_at);
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      return createdDate > thirtyDaysAgo;
-    }).length,
-    customerGrowth: 12.5, // You can calculate this based on historical data
+        // Fetch real dashboard stats
+        const statsResponse = await fetch("/api/dashboard/stats");
+        if (!statsResponse.ok) throw new Error("Failed to fetch stats");
 
-    // Project stats
-    activeProjects: projectsData.filter((project: any) => 
-      project.status === 'Active' || project.status === 'In Progress'
-    ).length,
-    completedProjects: projectsData.filter((project: any) => 
-      project.status === 'Completed'
-    ).length,
-    projectRevenue: projectsData.reduce((sum: number, project: any) => 
-      sum + (parseFloat(project.value) || 0), 0
-    ),
-    projectCompletionRate: projectsData.length > 0 ? 
-      Math.round((projectsData.filter((p: any) => p.status === 'Completed').length / projectsData.length) * 100) : 0,
+        const statsData = await statsResponse.json();
+        setApiStats(statsData);
 
-    // Invoice stats
-    pendingInvoices: invoicesData.filter((invoice: any) => 
-      invoice.status === 'pending' || invoice.status === 'unpaid'
-    ).length,
-    overdueInvoices: invoicesData.filter((invoice: any) => {
-      if ((invoice.status === 'pending' || invoice.status === 'unpaid') && invoice.due_date) {
-        const dueDate = new Date(invoice.due_date);
-        return dueDate < new Date();
+        // Use the real data from API
+        setSalesData(statsData.salesData || []);
+        setPurchasesData(statsData.purchasesData || []);
+        setProjectStatusData(statsData.projectStatusData || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        // Set fallback data
+        setApiStats({
+          totalCustomers: stats.totalCustomers,
+          activeProjects: stats.activeProjects,
+          pendingInvoices: stats.pendingInvoices,
+          totalRevenue: stats.totalRevenue,
+          overdueInvoices: stats.overdueInvoices,
+          completedProjects: stats.completedProjects,
+          tasksInProgress: stats.tasksInProgress,
+          revenueGrowth: 0,
+          customerGrowth: 0,
+          projectCompletionRate: 0,
+        });
+        setSalesData([]);
+        setPurchasesData([]);
+        setProjectStatusData([]);
+      } finally {
+        setLoading(false);
       }
-      return false;
-    }).length,
-    totalRevenue: invoicesData
-      .filter((invoice: any) => invoice.status === 'paid')
-      .reduce((sum: number, invoice: any) => sum + (parseFloat(invoice.amount) || 0), 0),
-    revenueThisMonth: invoicesData
-      .filter((invoice: any) => {
-        if (invoice.status === 'paid' && invoice.payment_date) {
-          const paymentDate = new Date(invoice.payment_date);
-          const now = new Date();
-          return paymentDate.getMonth() === now.getMonth() && 
-                 paymentDate.getFullYear() === now.getFullYear();
-        }
-        return false;
-      })
-      .reduce((sum: number, invoice: any) => sum + (parseFloat(invoice.amount) || 0), 0),
-    revenueGrowth: 8.3, // Calculate based on historical data
+    };
 
-    // Task stats
-    tasksInProgress: tasksData.filter((task: any) => 
-      task.status === 'in_progress' || task.status === 'pending'
-    ).length,
+    fetchData();
+  }, [stats]);
 
- 
-    totalPurchases: 0, // You might need purchase data from another endpoint
-    purchaseGrowth: 5.7,
-    pendingPayments: 0, // You might need payment data from another endpoint
-    pendingPaymentAmount: 0,
-  };
-
-  // Generate chart data from RTK Query data
-  const salesData = generateSalesData(invoicesData);
-  const purchasesData = generatePurchasesData(); // You might need actual purchase data
-  const projectStatusData = generateProjectStatusData(projectsData);
-  const topCustomers = generateTopCustomers(customersData, invoicesData);
-
-  function generateSalesData(invoices: any[]) {
-    const paidInvoices = invoices.filter((inv: any) => inv.status === 'paid');
-    const monthlyData: { [key: string]: number } = {};
-    
-    paidInvoices.forEach((invoice: any) => {
-      if (invoice.payment_date) {
-        const date = new Date(invoice.payment_date);
-        const monthYear = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        monthlyData[monthYear] = (monthlyData[monthYear] || 0) + (parseFloat(invoice.amount) || 0);
-      }
-    });
-    
-    return Object.entries(monthlyData)
-      .map(([month, amount]) => ({ month, amount }))
-      .slice(-6); // Last 6 months
-  }
-
-  function generatePurchasesData() {
-    // Mock data - replace with actual purchase data
-    return [
-      { month: 'Jan', amount: 45000 },
-      { month: 'Feb', amount: 52000 },
-      { month: 'Mar', amount: 48000 },
-      { month: 'Apr', amount: 61000 },
-      { month: 'May', amount: 55000 },
-      { month: 'Jun', amount: 59000 },
-    ];
-  }
-
-  function generateProjectStatusData(projects: any[]) {
-    const statusCount: { [key: string]: number } = {};
-    
-    projects.forEach((project: any) => {
-      const status = project.status || 'Unknown';
-      statusCount[status] = (statusCount[status] || 0) + 1;
-    });
-    
-    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
-  }
-
-  function generateTopCustomers(customers: any[], invoices: any[]) {
-    const customerRevenue: { [key: string]: number } = {};
-    
-    invoices
-      .filter((inv: any) => inv.status === 'paid')
-      .forEach((invoice: any) => {
-        if (invoice.customer) {
-          const customer = customers.find((c: any) => c.id === invoice.customer);
-          if (customer) {
-            const customerName = customer.company_name || `${customer.first_name} ${customer.last_name}`;
-            customerRevenue[customerName] = (customerRevenue[customerName] || 0) + (parseFloat(invoice.amount) || 0);
-          }
-        }
-      });
-    
-    return Object.entries(customerRevenue)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5)
-      .map(([name, value]) => ({ name, value }));
-  }
-
- 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex h-[300px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -232,26 +112,26 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
   return (
     <Tabs defaultValue="overview" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
-        <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">Overview</TabsTrigger>
-        <TabsTrigger value="sales" className="text-xs sm:text-sm py-2">Sales</TabsTrigger>
-        <TabsTrigger value="purchases" className="text-xs sm:text-sm py-2">Purchases</TabsTrigger>
-        <TabsTrigger value="projects" className="text-xs sm:text-sm py-2">Projects</TabsTrigger>
+      <TabsList>
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="sales">Sales</TabsTrigger>
+        <TabsTrigger value="purchases">Purchases</TabsTrigger>
+        <TabsTrigger value="projects">Projects</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Customers"
-            value={calculatedStats.totalCustomers}
+            value={apiStats.totalCustomers || 0}
             description="Active customers"
-            trend={calculatedStats.customerGrowth}
+            trend={apiStats.customerGrowth || 0}
             icon={<Users className="h-4 w-4 text-muted-foreground" />}
           />
 
           <StatsCard
             title="Active Projects"
-            value={calculatedStats.activeProjects}
+            value={apiStats.activeProjects || 0}
             description="Projects in progress"
             trend={5.2}
             icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
@@ -259,7 +139,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
           <StatsCard
             title="Pending Invoices"
-            value={calculatedStats.pendingInvoices}
+            value={apiStats.pendingInvoices || 0}
             description="Awaiting payment"
             trend={-1.8}
             trendDirection="down"
@@ -268,25 +148,25 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
           <StatsCard
             title="Total Revenue"
-            value={calculatedStats.totalRevenue}
+            value={apiStats.totalRevenue || 0}
             isCurrency={true}
             description="This year"
-            trend={calculatedStats.revenueGrowth}
+            trend={apiStats.revenueGrowth || 0}
             icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
           />
 
           <StatsCard
             title="Monthly Revenue"
-            value={calculatedStats.revenueThisMonth}
+            value={apiStats.revenueThisMonth || 0}
             isCurrency={true}
             description="Current month"
-            trend={calculatedStats.revenueGrowth}
+            trend={apiStats.revenueGrowth || 0}
             icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
           />
 
           <StatsCard
             title="Overdue Invoices"
-            value={calculatedStats.overdueInvoices}
+            value={apiStats.overdueInvoices || 0}
             description="Needs attention"
             trend={3.2}
             trendDirection="down"
@@ -295,7 +175,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
           <StatsCard
             title="Tasks In Progress"
-            value={calculatedStats.tasksInProgress}
+            value={apiStats.tasksInProgress || 0}
             description="Across all projects"
             trend={1.2}
             icon={<Clock className="h-4 w-4 text-muted-foreground" />}
@@ -303,21 +183,21 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
 
           <StatsCard
             title="Completed Projects"
-            value={calculatedStats.completedProjects}
+            value={apiStats.completedProjects || 0}
             description="Total completed"
             trend={4.9}
             icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
           />
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Monthly Revenue Trend</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Revenue over the last 6 months</CardDescription>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Monthly Revenue Trend</CardTitle>
+              <CardDescription>Revenue over the last 6 months</CardDescription>
             </CardHeader>
-            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
+            <CardContent className="pl-2">
+              <ResponsiveContainer width="100%" height={350}>
                 {salesData.length > 0 ? (
                   <LineChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -346,13 +226,13 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Project Status</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Current status distribution</CardDescription>
+          <Card className="col-span-3">
+            <CardHeader>
+              <CardTitle>Project Status</CardTitle>
+              <CardDescription>Current status distribution</CardDescription>
             </CardHeader>
-            <CardContent className="px-2 sm:px-6">
-              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
                 {projectStatusData.length > 0 ? (
                   <PieChart>
                     <Pie
@@ -389,18 +269,18 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       </TabsContent>
 
       <TabsContent value="sales" className="space-y-4">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium">Total Sales</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₹{calculatedStats.totalRevenue.toLocaleString()}
+                ₹{(apiStats.totalRevenue || 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
-                +{calculatedStats.revenueGrowth}% from last month
+                +{apiStats.revenueGrowth || 0}% from last month
               </p>
             </CardContent>
           </Card>
@@ -414,11 +294,10 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {calculatedStats.pendingInvoices}
+                {apiStats.pendingInvoices || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {/* You can add pending invoice amount calculation here */}
-                {calculatedStats.pendingInvoices} invoices pending
+                ₹{(apiStats.pendingInvoiceAmount || 0).toLocaleString()} pending
               </p>
             </CardContent>
           </Card>
@@ -432,23 +311,23 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {calculatedStats.newCustomers}
+                {apiStats.newCustomers || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                +{calculatedStats.customerGrowth}% from last month
+                +{apiStats.customerGrowth || 0}% from last month
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Sales Overview</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Monthly sales performance</CardDescription>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Sales Overview</CardTitle>
+              <CardDescription>Monthly sales performance</CardDescription>
             </CardHeader>
-            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
+            <CardContent className="pl-2">
+              <ResponsiveContainer width="100%" height={350}>
                 {salesData.length > 0 ? (
                   <BarChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -471,17 +350,17 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Top Customers</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">By revenue contribution</CardDescription>
+          <Card className="col-span-3">
+            <CardHeader>
+              <CardTitle>Top Customers</CardTitle>
+              <CardDescription>By revenue contribution</CardDescription>
             </CardHeader>
-            <CardContent className="px-2 sm:px-6">
-              {topCustomers.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+            <CardContent>
+              {apiStats.topCustomers && apiStats.topCustomers.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={topCustomers}
+                      data={apiStats.topCustomers}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -492,12 +371,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
                         `${name}: ${(percent * 100).toFixed(0)}%`
                       }
                     >
-                      {topCustomers.map((entry: any, index: number) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
+                      {apiStats.topCustomers.map(
+                        (entry: any, index: number) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        )
+                      )}
                     </Pie>
                     <Tooltip
                       formatter={(value) => [
@@ -519,20 +400,37 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       </TabsContent>
 
       <TabsContent value="purchases" className="space-y-4">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
                 Total Purchases
               </CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₹{calculatedStats.totalPurchases.toLocaleString()}
+                ₹{(apiStats.totalPurchases || 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
-                +{calculatedStats.purchaseGrowth}% from last month
+                +{apiStats.purchaseGrowth || 0}% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Active Vendors
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {apiStats.activeVendors || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {apiStats.newVendors || 0} new this month
               </p>
             </CardContent>
           </Card>
@@ -546,25 +444,25 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {calculatedStats.pendingPayments}
+                {apiStats.pendingPayments || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                ₹{calculatedStats.pendingPaymentAmount.toLocaleString()} pending
+                ₹{(apiStats.pendingPaymentAmount || 0).toLocaleString()} pending
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Purchase Overview</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Purchase Overview</CardTitle>
+              <CardDescription>
                 Monthly purchases for the current year
               </CardDescription>
             </CardHeader>
-            <CardContent className="pl-0 sm:pl-2 px-2 sm:px-6">
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
+            <CardContent className="pl-2">
+              <ResponsiveContainer width="100%" height={350}>
                 {purchasesData.length > 0 ? (
                   <BarChart data={purchasesData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -587,24 +485,68 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
+          <Card className="col-span-3">
+            <CardHeader>
+              <CardTitle>Top Vendors</CardTitle>
+              <CardDescription>By purchase volume</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {apiStats.topVendors && apiStats.topVendors.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={apiStats.topVendors}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                    >
+                      {apiStats.topVendors.map((entry: any, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [
+                        `₹${Number(value).toLocaleString()}`,
+                        "Purchases",
+                      ]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  No vendor data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
       <TabsContent value="projects" className="space-y-4">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
                 Active Projects
               </CardTitle>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {calculatedStats.activeProjects}
+                {apiStats.activeProjects || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {calculatedStats.completedProjects} completed this year
+                {apiStats.completedProjects || 0} completed this year
               </p>
             </CardContent>
           </Card>
@@ -618,12 +560,12 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ₹{calculatedStats.projectRevenue.toLocaleString()}
+                ₹{(apiStats.projectRevenue || 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
-                {calculatedStats.totalRevenue > 0
+                {apiStats.totalRevenue > 0
                   ? Math.round(
-                      (calculatedStats.projectRevenue / calculatedStats.totalRevenue) * 100
+                      (apiStats.projectRevenue / apiStats.totalRevenue) * 100
                     )
                   : 0}
                 % of total revenue
@@ -640,7 +582,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {calculatedStats.projectCompletionRate}%
+                {apiStats.projectCompletionRate || 0}%
               </div>
               <p className="text-xs text-muted-foreground">
                 Average project completion
@@ -649,14 +591,14 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
           </Card>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="lg:col-span-4">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Project Status Distribution</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Current status of all projects</CardDescription>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Project Status Distribution</CardTitle>
+              <CardDescription>Current status of all projects</CardDescription>
             </CardHeader>
-            <CardContent className="px-2 sm:px-6">
-              <ResponsiveContainer width="100%" height={300} className="sm:h-[350px]">
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
                 {projectStatusData.length > 0 ? (
                   <PieChart>
                     <Pie
@@ -690,32 +632,32 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
-            <CardHeader className="px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg">Project Metrics</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Key performance indicators</CardDescription>
+          <Card className="col-span-3">
+            <CardHeader>
+              <CardTitle>Project Metrics</CardTitle>
+              <CardDescription>Key performance indicators</CardDescription>
             </CardHeader>
-            <CardContent className="px-4 sm:px-6">
-              <div className="space-y-3 sm:space-y-4">
+            <CardContent>
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm font-medium">On Time Delivery</span>
-                  <span className="text-sm sm:text-base font-bold">85%</span>
+                  <span className="text-sm font-medium">On Time Delivery</span>
+                  <span className="text-sm font-bold">85%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm font-medium">Budget Adherence</span>
-                  <span className="text-sm sm:text-base font-bold">92%</span>
+                  <span className="text-sm font-medium">Budget Adherence</span>
+                  <span className="text-sm font-bold">92%</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm font-medium">
+                  <span className="text-sm font-medium">
                     Client Satisfaction
                   </span>
-                  <span className="text-sm sm:text-base font-bold">4.8/5</span>
+                  <span className="text-sm font-bold">4.8/5</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs sm:text-sm font-medium">
+                  <span className="text-sm font-medium">
                     Resource Utilization
                   </span>
-                  <span className="text-sm sm:text-base font-bold">78%</span>
+                  <span className="text-sm font-bold">78%</span>
                 </div>
               </div>
             </CardContent>

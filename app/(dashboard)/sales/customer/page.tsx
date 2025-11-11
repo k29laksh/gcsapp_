@@ -48,7 +48,6 @@ import {
   useGetCustomerStatsQuery,
   useDeleteCustomerMutation,
 } from "@/redux/Service/customer";
-import { useGetProjectsQuery } from "@/redux/Service/projects";
 
 interface CustomerContact {
   id: string;
@@ -110,12 +109,9 @@ export default function CustomersPage() {
     isLoading, 
     error,
     refetch 
-  } = useGetCustomersQuery({});
-
-
-  const {data: projects} = useGetProjectsQuery({})
+  } = useGetCustomersQuery();
   
-  const { data: stats } = useGetCustomerStatsQuery({});
+  const { data: stats } = useGetCustomerStatsQuery();
   const [deleteCustomer] = useDeleteCustomerMutation();
 
   // Handle errors
@@ -144,11 +140,6 @@ export default function CustomersPage() {
         variant: "destructive",
       });
     }
-    finally {
-    // Manually close any lingering dialogs or overlays
-    document.body.style.pointerEvents = "auto"; // unlocks UI
-    document.body.style.overflow = "auto";      // re-enables scrolling
-  }
   };
 
   // Get primary contact or first contact
@@ -344,7 +335,7 @@ export default function CustomersPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -353,7 +344,7 @@ export default function CustomersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{customers.length || 0}</div>
+            <div className="text-2xl font-bold">{stats?.totalCustomers || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.companyCustomers || 0} companies, {stats?.individualCustomers || 0}{" "}
               individuals
@@ -396,7 +387,7 @@ export default function CustomersPage() {
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{projects?.length || 0}</div>
+            <div className="text-2xl font-bold">{stats?.totalProjects || 0}</div>
             <p className="text-xs text-muted-foreground">
               Across all customers
             </p>

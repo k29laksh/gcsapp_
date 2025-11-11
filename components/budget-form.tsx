@@ -173,7 +173,7 @@ export function BudgetForm({ budget, isEditing = false }: BudgetFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="fiscalYear">Fiscal Year</Label>
               <Select value={formData.fiscalYear} onValueChange={(value) => handleSelectChange("fiscalYear", value)}>
@@ -206,7 +206,7 @@ export function BudgetForm({ budget, isEditing = false }: BudgetFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Start Date</Label>
               <DatePicker
@@ -223,7 +223,7 @@ export function BudgetForm({ budget, isEditing = false }: BudgetFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="totalAmount">Total Budget Amount</Label>
               <Input

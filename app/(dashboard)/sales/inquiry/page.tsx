@@ -109,27 +109,22 @@ export default function InquiryPage() {
   }, [error, toast])
 
   const handleDelete = async (id: string) => {
-  try {
-    await deleteInquiry(id).unwrap();
-
-    toast({
-      title: "Success",
-      description: "Inquiry deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting inquiry:", error);
-    toast({
-      title: "Error",
-      description: "Failed to delete inquiry",
-      variant: "destructive",
-    });
-  } finally {
-    // Manually close any lingering dialogs or overlays
-    document.body.style.pointerEvents = "auto"; // unlocks UI
-    document.body.style.overflow = "auto";      // re-enables scrolling
+    try {
+      await deleteInquiry(id).unwrap()
+      
+      toast({
+        title: "Success",
+        description: "Inquiry deleted successfully",
+      })
+    } catch (error) {
+      console.error("Error deleting inquiry:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete inquiry",
+        variant: "destructive",
+      })
+    }
   }
-};
-
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
@@ -297,7 +292,7 @@ export default function InquiryPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Inquiries</CardTitle>

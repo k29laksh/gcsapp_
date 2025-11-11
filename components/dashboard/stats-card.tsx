@@ -42,19 +42,19 @@ export function StatsCard({
   const trendColor = actualTrendDirection === "up" ? "text-green-600" : "text-red-600"
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-        <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">{title}</CardTitle>
-        <div className="shrink-0">{icon}</div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
       </CardHeader>
-      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-        <div className="text-xl sm:text-2xl md:text-3xl font-bold truncate">{formattedValue}</div>
-        <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 sm:mt-0 text-xs sm:text-sm">
-          <span className="truncate">{description}</span>
-          <div className={`flex items-center gap-1 ${trendColor} shrink-0`}>
+      <CardContent>
+        <div className="text-2xl font-bold">{formattedValue}</div>
+        <CardDescription className="flex items-center gap-1">
+          {description}
+          <div className={`ml-auto flex items-center gap-1 ${trendColor}`}>
             {actualTrendDirection === "up" ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
             <span className="text-xs">{Math.abs(trend)}%</span>
-            <span className="hidden sm:inline text-xs text-muted-foreground">{trendLabel}</span>
+            <span className="text-xs text-muted-foreground">{trendLabel}</span>
           </div>
         </CardDescription>
       </CardContent>

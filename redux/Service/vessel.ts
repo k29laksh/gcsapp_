@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const vesselApi = createApi({
   reducerPath: 'vesselApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl: `${process.env.NEXT_PUBLIC_BACKEND_URL}/vessels`,
+    baseUrl: 'http://127.0.0.1:8000/vessels',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

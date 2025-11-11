@@ -6,7 +6,7 @@ import { RootState } from "../store";
 export const quotationApi = createApi({
   reducerPath: 'quotationApi',
   baseQuery: fetchBaseQuery({ 
-    baseUrl:  `${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation`,
+    baseUrl: 'http://localhost:8000/quotation',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.userInfo?.access;
       if (token) {

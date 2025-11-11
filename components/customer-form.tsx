@@ -330,34 +330,34 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardHeader className="px-4 sm:px-6">
-          <CardTitle className="text-lg sm:text-xl">{isEditing ? "Edit Customer" : "New Customer"}</CardTitle>
+        <CardHeader>
+          <CardTitle>{isEditing ? "Edit Customer" : "New Customer"}</CardTitle>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6">
+        <CardContent>
           <Tabs defaultValue="general" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 h-auto">
-              <TabsTrigger value="general" className="text-xs sm:text-sm py-2">General</TabsTrigger>
-              <TabsTrigger value="contacts" className="text-xs sm:text-sm py-2">Contacts</TabsTrigger>
-              <TabsTrigger value="address" className="text-xs sm:text-sm py-2">Address</TabsTrigger>
+            <TabsList>
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="contacts">Contacts</TabsTrigger>
+              <TabsTrigger value="address">Address</TabsTrigger>
             </TabsList>
 
             {/* General Tab */}
             <TabsContent value="general" className="space-y-4">
               <div>
-                <Label className="text-sm">Customer Type</Label>
+                <Label>Customer Type</Label>
                 <RadioGroup
                   name="customer_type"
                   value={formData.customer_type}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, customer_type: value }))}
-                  className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2"
+                  className="flex gap-4 mt-2"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="Individual" id="individual" />
-                    <Label htmlFor="individual" className="text-sm font-normal">Individual</Label>
+                    <Label htmlFor="individual">Individual</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="Company" id="company" />
-                    <Label htmlFor="company" className="text-sm font-normal">Company</Label>
+                    <Label htmlFor="company">Company</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -365,7 +365,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
               {formData.customer_type === "Company" && (
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="company_name" className="text-sm">Company Name</Label>
+                    <Label htmlFor="company_name">Company Name</Label>
                     <Input
                       id="company_name"
                       name="company_name"
@@ -375,9 +375,9 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="gst_number" className="text-sm">GST Number</Label>
+                      <Label htmlFor="gst_number">GST Number</Label>
                       <Input
                         id="gst_number"
                         name="gst_number"
@@ -387,7 +387,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       />
                     </div>
                     <div>
-                      <Label htmlFor="pan_number" className="text-sm">PAN Number</Label>
+                      <Label htmlFor="pan_number">PAN Number</Label>
                       <Input
                         id="pan_number"
                         name="pan_number"
@@ -398,9 +398,9 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="gst_state" className="text-sm">GST State</Label>
+                      <Label htmlFor="gst_state">GST State</Label>
                       <Select
                         value={formData.gst_state}
                         onValueChange={(value) => handleSelectChange("gst_state", value)}
@@ -419,7 +419,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="gst_type" className="text-sm">GST Type</Label>
+                      <Label htmlFor="gst_type">GST Type</Label>
                       <Select value={formData.gst_type} onValueChange={(value) => handleSelectChange("gst_type", value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select GST Type" />
@@ -435,9 +435,9 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="credit_terms_days" className="text-sm">Credit Terms (Days)</Label>
+                  <Label htmlFor="credit_terms_days">Credit Terms (Days)</Label>
                   <Input
                     id="credit_terms_days"
                     name="credit_terms_days"
@@ -447,7 +447,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                   />
                 </div>
                 <div>
-                  <Label htmlFor="credit_limit" className="text-sm">Credit Limit</Label>
+                  <Label htmlFor="credit_limit">Credit Limit</Label>
                   <Input
                     id="credit_limit"
                     name="credit_limit"
@@ -461,54 +461,49 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
 
             {/* Contacts Tab */}
             <TabsContent value="contacts" className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                <h3 className="text-base sm:text-lg font-semibold">Contact Persons</h3>
-                <Button type="button" variant="outline" onClick={() => openContactDialog()} size="sm" className="w-full sm:w-auto">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Contact Persons</h3>
+                <Button type="button" variant="outline" onClick={() => openContactDialog()}>
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Add Contact
                 </Button>
               </div>
 
               {formData.contacts.length > 0 ? (
-                <div className="rounded-md border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <Table>
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs sm:text-sm whitespace-nowrap">Name</TableHead>
-                      <TableHead className="text-xs sm:text-sm whitespace-nowrap">Designation</TableHead>
-                      <TableHead className="text-xs sm:text-sm whitespace-nowrap">Contact</TableHead>
-                      <TableHead className="text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
-                      <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Designation</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {formData.contacts.map((contact, index) => (
                       <TableRow key={contact.id || index}>
-                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">
+                        <TableCell>
                           {contact.title} {contact.first_name} {contact.last_name}
                         </TableCell>
-                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">{contact.designation}</TableCell>
-                        <TableCell className="text-xs sm:text-sm">
-                          <div className="space-y-1">
-                            <div className="truncate">{contact.email}</div>
-                            <div>{contact.phone}</div>
-                          </div>
+                        <TableCell>{contact.designation}</TableCell>
+                        <TableCell>
+                          <div>{contact.email}</div>
+                          <div>{contact.phone}</div>
                         </TableCell>
-                        <TableCell className="text-xs sm:text-sm">{contact.is_primary && <Badge className="text-xs">Primary</Badge>}</TableCell>
+                        <TableCell>{contact.is_primary && <Badge>Primary</Badge>}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1 sm:gap-2">
+                          <div className="flex justify-end gap-2">
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => openContactDialog(contact, index)}
-                              className="text-xs h-7 px-2"
                             >
                               Edit
                             </Button>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => deleteContact(index)} className="h-7 px-2">
-                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                            <Button type="button" variant="ghost" size="sm" onClick={() => deleteContact(index)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </div>
                         </TableCell>
@@ -516,8 +511,6 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     ))}
                   </TableBody>
                 </Table>
-                  </div>
-                </div>
               ) : (
                 <div className="text-center py-8 border rounded-md bg-muted/20">
                   <UserCircle className="h-12 w-12 mx-auto text-muted-foreground" />
@@ -536,16 +529,16 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
 
               {/* Contact Dialog */}
               <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle className="text-base sm:text-lg">{editingContactIndex !== null ? "Edit Contact" : "Add Contact"}</DialogTitle>
+                    <DialogTitle>{editingContactIndex !== null ? "Edit Contact" : "Add Contact"}</DialogTitle>
                   </DialogHeader>
 
                   {currentContact && (
                     <div className="space-y-4 py-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <Label htmlFor="title" className="text-sm">Title</Label>
+                          <Label htmlFor="title">Title</Label>
                           <Select
                             value={currentContact.title}
                             onValueChange={(value) => handleContactSelectChange("title", value)}
@@ -562,7 +555,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="first_name" className="text-sm">First Name</Label>
+                          <Label htmlFor="first_name">First Name</Label>
                           <Input
                             id="first_name"
                             name="first_name"
@@ -572,7 +565,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                           />
                         </div>
                         <div>
-                          <Label htmlFor="last_name" className="text-sm">Last Name</Label>
+                          <Label htmlFor="last_name">Last Name</Label>
                           <Input
                             id="last_name"
                             name="last_name"
@@ -583,7 +576,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </div>
 
                       <div>
-                        <Label htmlFor="designation" className="text-sm">Designation</Label>
+                        <Label htmlFor="designation">Designation</Label>
                         <Input
                           id="designation"
                           name="designation"
@@ -594,7 +587,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </div>
 
                       <div>
-                        <Label htmlFor="email" className="text-sm">Email</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input
                           id="email"
                           name="email"
@@ -604,9 +597,9 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="phone" className="text-sm">Phone</Label>
+                          <Label htmlFor="phone">Phone</Label>
                           <Input
                             id="phone"
                             name="phone"
@@ -616,7 +609,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                           />
                         </div>
                         <div>
-                          <Label htmlFor="alternate_phone" className="text-sm">Alternate Phone</Label>
+                          <Label htmlFor="alternate_phone">Alternate Phone</Label>
                           <Input
                             id="alternate_phone"
                             name="alternate_phone"
@@ -628,7 +621,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </div>
 
                       <div>
-                        <Label htmlFor="notes" className="text-sm">Notes</Label>
+                        <Label htmlFor="notes">Notes</Label>
                         <Textarea
                           id="notes"
                           name="notes"
@@ -646,7 +639,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                         />
                         <label
                           htmlFor="is_primary"
-                          className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
                           Primary Contact
                         </label>
@@ -654,13 +647,13 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     </div>
                   )}
 
-                  <DialogFooter className="flex-col sm:flex-row gap-2">
+                  <DialogFooter>
                     <DialogClose asChild>
-                      <Button type="button" variant="outline" className="w-full sm:w-auto">
+                      <Button type="button" variant="outline">
                         Cancel
                       </Button>
                     </DialogClose>
-                    <Button type="button" onClick={saveContact} className="w-full sm:w-auto">
+                    <Button type="button" onClick={saveContact}>
                       Save
                     </Button>
                   </DialogFooter>
@@ -669,12 +662,12 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
             </TabsContent>
 
             {/* Address Tab */}
-            <TabsContent value="address" className="space-y-6 sm:space-y-8">
+            <TabsContent value="address" className="space-y-8">
               <div>
-                <h3 className="text-base sm:text-lg font-semibold mb-4">Billing Address</h3>
+                <h3 className="text-lg font-semibold mb-4">Billing Address</h3>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="billingAddressLine1" className="text-sm">Address Line 1</Label>
+                    <Label htmlFor="billingAddressLine1">Address Line 1</Label>
                     <Input
                       id="billingAddressLine1"
                       value={billingAddress?.address_line1 || ""}
@@ -683,16 +676,16 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     />
                   </div>
                   <div>
-                    <Label htmlFor="billingAddressLine2" className="text-sm">Address Line 2</Label>
+                    <Label htmlFor="billingAddressLine2">Address Line 2</Label>
                     <Input
                       id="billingAddressLine2"
                       value={billingAddress?.address_line2 || ""}
                       onChange={(e) => handleAddressChange("Billing", "address_line2", e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="billingCountry" className="text-sm">Country</Label>
+                      <Label htmlFor="billingCountry">Country</Label>
                       <Select
                         value={billingAddress?.country || "India"}
                         onValueChange={(value) => handleAddressChange("Billing", "country", value)}
@@ -710,7 +703,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="billingState" className="text-sm">State</Label>
+                      <Label htmlFor="billingState">State</Label>
                       <Input
                         id="billingState"
                         value={billingAddress?.state || ""}
@@ -719,7 +712,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       />
                     </div>
                     <div>
-                      <Label htmlFor="billingCity" className="text-sm">City</Label>
+                      <Label htmlFor="billingCity">City</Label>
                       <Input
                         id="billingCity"
                         value={billingAddress?.city || ""}
@@ -729,7 +722,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="billingPostalCode" className="text-sm">Postal Code</Label>
+                    <Label htmlFor="billingPostalCode">Postal Code</Label>
                     <Input
                       id="billingPostalCode"
                       value={billingAddress?.postal_code || ""}
@@ -748,15 +741,15 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                   />
                   <label
                     htmlFor="same_as_billing"
-                    className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     Same as Billing Address
                   </label>
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold mb-4">Shipping Address</h3>
+                <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="shippingAddressLine1" className="text-sm">Address Line 1</Label>
+                    <Label htmlFor="shippingAddressLine1">Address Line 1</Label>
                     <Input
                       id="shippingAddressLine1"
                       value={shippingAddress?.address_line1 || ""}
@@ -766,7 +759,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     />
                   </div>
                   <div>
-                    <Label htmlFor="shippingAddressLine2" className="text-sm">Address Line 2</Label>
+                    <Label htmlFor="shippingAddressLine2">Address Line 2</Label>
                     <Input
                       id="shippingAddressLine2"
                       value={shippingAddress?.address_line2 || ""}
@@ -774,9 +767,9 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       disabled={formData.same_as_billing}
                     />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="shippingCountry" className="text-sm">Country</Label>
+                      <Label htmlFor="shippingCountry">Country</Label>
                       <Select
                         value={shippingAddress?.country || "India"}
                         onValueChange={(value) => handleAddressChange("Shipping", "country", value)}
@@ -795,7 +788,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="shippingState" className="text-sm">State</Label>
+                      <Label htmlFor="shippingState">State</Label>
                       <Input
                         id="shippingState"
                         value={shippingAddress?.state || ""}
@@ -805,7 +798,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                       />
                     </div>
                     <div>
-                      <Label htmlFor="shippingCity" className="text-sm">City</Label>
+                      <Label htmlFor="shippingCity">City</Label>
                       <Input
                         id="shippingCity"
                         value={shippingAddress?.city || ""}
@@ -816,7 +809,7 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="shippingPostalCode" className="text-sm">Postal Code</Label>
+                    <Label htmlFor="shippingPostalCode">Postal Code</Label>
                     <Input
                       id="shippingPostalCode"
                       value={shippingAddress?.postal_code || ""}
@@ -830,11 +823,11 @@ export function CustomerForm({ customer, isEditing = false }: CustomerFormProps)
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex flex-col sm:flex-row justify-between gap-3 px-4 sm:px-6">
-          <Button variant="outline" type="button" onClick={() => router.back()} disabled={isLoading} className="w-full sm:w-auto">
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" type="button" onClick={() => router.back()} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

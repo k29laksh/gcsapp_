@@ -102,7 +102,7 @@ export function VendorForm({ vendor, isEditing = false }: VendorFormProps) {
                 <Label htmlFor="contactName">Contact Person</Label>
                 <Input id="contactName" name="contactName" value={formData.contactName} onChange={handleChange} />
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} />
@@ -118,7 +118,7 @@ export function VendorForm({ vendor, isEditing = false }: VendorFormProps) {
                 <Label htmlFor="address">Address</Label>
                 <Textarea id="address" name="address" value={formData.address} onChange={handleChange} rows={3} />
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input id="city" name="city" value={formData.city} onChange={handleChange} />
@@ -128,7 +128,7 @@ export function VendorForm({ vendor, isEditing = false }: VendorFormProps) {
                   <Input id="state" name="state" value={formData.state} onChange={handleChange} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="postalCode">Postal Code</Label>
                   <Input id="postalCode" name="postalCode" value={formData.postalCode} onChange={handleChange} />

@@ -46,7 +46,6 @@ import {
   useLazyDownloadInvoicePdfQuery,
 } from "@/redux/Service/invoice";
 import Link from "next/link";
-import InvoiceViewer from "@/components/InvoslipViewer";
 
 export default function InvoiceDetailsPage() {
   const [isSending, setIsSending] = useState(false);
@@ -55,9 +54,7 @@ export default function InvoiceDetailsPage() {
   const params = useParams();
   const { toast } = useToast();
   const invoiceId = params.id as string;
-  const userinfo = window.localStorage.getItem("userInfo");
-  const token = userinfo ? JSON.parse(userinfo).access : null;
-  console.log(token);
+
   // RTK Query hooks
   const {
     data: invoice,
@@ -80,6 +77,7 @@ export default function InvoiceDetailsPage() {
     }
   }, [error, toast]);
 
+ 
   const handleDeleteInvoice = async () => {
     try {
       setIsDeleting(true);
@@ -210,7 +208,25 @@ export default function InvoiceDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          
+          <Link
+            href={pdfUrl || "#"} // Use the PDF URL
+            target="_blank" // Opens the link in a new tab
+            rel="noopener noreferrer"
+            passHref // Optional: ensures href is passed to the underlying <a> tag
+            // Note: className and styles should usually be applied to the Button itself
+            // or to the <a> tag if needed, but not usually to the Link component itself.
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!pdfUrl} // Disable button if URL is missing
+            >
+              <Download className="mr-2 h-4 w-4" />
+              View/Download PDF
+            </Button>
+          </Link>
+
+       
 
           <Button
             variant="outline"
@@ -471,6 +487,8 @@ export default function InvoiceDetailsPage() {
                   Mark as Paid
                 </Button>
               )}
+
+             
             </CardFooter>
           </Card>
 
@@ -488,27 +506,18 @@ export default function InvoiceDetailsPage() {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Invoice
               </Button>
-              {/* PDF Status Alert */}
-
-              <Card className="bg-blue-50 border-blue-200 no-print">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-start justify-start gap-2">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <span className="text-blue-800 font-medium">
-                        PDF Available
-                      </span>
-                      <span className="text-blue-600 text-sm">
-                        • Ready for download
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <InvoiceViewer invoiceId={invoiceId} token={token} />
-                  </div>
-                </CardContent>
-              </Card>
+              <Link
+                href={pdfUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                passHref
+                className=""
+              >
+                <Button variant="outline" size="sm" disabled={!pdfUrl}>
+                  <Download className="mr-2 h-4 w-4" />
+                  View/Download PDF
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

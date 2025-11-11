@@ -200,7 +200,7 @@ export function TimeEntryForm({ timeEntry, isEditing = false }: TimeEntryFormPro
           <CardTitle>{isEditing ? "Edit Time Entry" : "Log Time"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="employeeId">Employee</Label>
               <Select value={formData.employeeId} onValueChange={(value) => handleSelectChange("employeeId", value)}>
@@ -255,7 +255,7 @@ export function TimeEntryForm({ timeEntry, isEditing = false }: TimeEntryFormPro
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startTime">Start Time</Label>
               <Input
